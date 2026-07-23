@@ -2,7 +2,7 @@ const btnUpload = document.getElementById("btnUpload");
 const fileInput = document.getElementById("fileInput");
 const content = document.getElementById("content");
 
-// Sự kiện
+// Đăng ký sự kiện
 btnUpload.addEventListener("click", openFileDialog);
 fileInput.addEventListener("change", handleFileSelected);
 
@@ -11,7 +11,7 @@ function openFileDialog() {
     fileInput.click();
 }
 
-// Xử lý sau khi chọn file
+// Xử lý khi người dùng chọn file
 function handleFileSelected() {
 
     if (fileInput.files.length === 0) {
