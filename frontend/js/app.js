@@ -2,13 +2,16 @@ const btnUpload = document.getElementById("btnUpload");
 const fileInput = document.getElementById("fileInput");
 const content = document.getElementById("content");
 
+// Sự kiện
 btnUpload.addEventListener("click", openFileDialog);
 fileInput.addEventListener("change", handleFileSelected);
 
+// Mở hộp thoại chọn file
 function openFileDialog() {
     fileInput.click();
 }
 
+// Xử lý sau khi chọn file
 function handleFileSelected() {
 
     if (fileInput.files.length === 0) {
@@ -20,6 +23,7 @@ function handleFileSelected() {
     showFileInfo(file);
 }
 
+// Hiển thị thông tin file
 function showFileInfo(file) {
 
     const sizeKB = (file.size / 1024).toFixed(2);
