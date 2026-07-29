@@ -151,16 +151,6 @@ return true;
 finalText = cleaned.join("\n").replace(/\n{3,}/g, "\n\n");
 
 output.innerText = finalText;
-async function readDocument(file) {
-
-const output = document.getElementById("documentContent");
-
-if (!output) {
-    alert("Chưa có vùng hiển thị nội dung");
-    return;
-}
-
-output.innerHTML = "Đang đọc tài liệu...";
 
 // ===== TXT =====
 if (file.name.toLowerCase().endsWith(".txt")) {
