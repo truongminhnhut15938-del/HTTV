@@ -1,307 +1,44 @@
-async function readDocument(file) {
+async function processDocument(file) {
+const name = file.name;
+const type = file.type || getFileExtension(file.name);
 
-const output = document.getElementById("documentContent");
+let text = '';
 
-if (!output) {
-    alert("Chưa có vùng hiển thị nội dung");
-    return;
-}
+try {
 
-output.innerHTML = "Đang đọc tài liệu...";
+if (name.toLowerCase().endsWith('.txt')) {
+  text = await parseTXT(file);
 
-// ===== TXT =====
-if (file.name.toLowerCase().endsWith(".txt")) {
+} else if (name.toLowerCase().endsWith('.docx')) {
+  text = await parseDOCX(file);
 
-    const text = await file.text();
-    output.innerText = text;
-    saveDocument({
-id: Date.now().toString(),
-title: file.name,
-type: "txt",
-source: "local",
-createdAt: Date.now(),
-content: text
-});
-    return;
-}
-    
-// ===== PDF =====
-if (file.type === "application/pdf") {
+} else if (name.toLowerCase().endsWith('.pdf')) {
+  text = await parsePDF(file);
 
-    const pdf = await pdfjsLib.getDocument({
-        data: await file.arrayBuffer()
-    }).promise;
-
-    let text = "";
-
-    for (let i = 1; i <= pdf.numPages; i++) {
-
-        const page = await pdf.getPage(i);
-        const content = await page.getTextContent();
-
-        text += content.items
-            .map(item => item.str)
-            .join(" ") + "\n";
-    }
-
-    if (text.trim().length < 20) {
-await readPDFWithOCR(file);
-return;
 } else {
-output.innerText = text;
-}
-saveDocument({
-id: Date.now().toString(),
-title: file.name,
-type: "pdf",
-source: "local",
-createdAt: Date.now(),
-content: text
-});    
-return;
+  throw new Error('Định dạng chưa được hỗ trợ');
 }
 
-// ===== DOCX =====
-if (file.name.toLowerCase().endsWith(".docx")) {
+const documentData = {
+  name,
+  type,
+  size: file.size,
+  content: text,
+  createdAt: new Date().toISOString()
+};
 
-    const arrayBuffer = await file.arrayBuffer();
+await saveDocument(documentData);
 
-    const result = await mammoth.extractRawText({
-        arrayBuffer: arrayBuffer
-    });
+return documentData;
 
-    output.innerText = result.value;
-    saveDocument({
-id: Date.now().toString(),
-title: file.name,
-type: "docx",
-source: "local",
-createdAt: Date.now(),
-content: result.value
-});
-    return;
-}
-
-// ===== Chưa hỗ trợ =====
-if (file.name.toLowerCase().endsWith(".doc")) {
-output.innerText =
-"HTTV chưa hỗ trợ file .DOC (Word 97-2003).\n\nVui lòng mở file bằng Microsoft Word hoặc LibreOffice và lưu lại dưới định dạng .DOCX, sau đó thêm lại vào HTTV.";
-} else {
-output.innerText =
-"HTTV hiện hỗ trợ TXT, PDF và DOCX.";
+} catch (err) {
+console.error(err);
+throw err;
 }
 }
-async function readPDFWithOCR(file) {
 
-const output = document.getElementById("documentContent");
-
-output.innerHTML = "Đang nhận dạng chữ từ PDF scan...";
-
-const pdf = await pdfjsLib.getDocument({
-    data: await file.arrayBuffer()
-}).promise;
-
-let finalText = "";
-
-for (let i = 1; i <= pdf.numPages; i++) {
-
-output.innerHTML = `Đang OCR trang ${i}/${pdf.numPages}...`;
-
-const page = await pdf.getPage(i);
-const viewport = page.getViewport({ scale: 2 });
-
-const canvas = document.createElement("canvas");
-const context = canvas.getContext("2d");
-
-canvas.width = viewport.width;
-canvas.height = viewport.height;
-
-await page.render({
-    canvasContext: context,
-    viewport: viewport
-}).promise;
-
-const result = await Tesseract.recognize(canvas, "vie+eng");
-
-finalText += `\n===== Trang ${i} =====\n`;
-finalText += result.data.text + "\n";
-
+function getFileExtension(filename) {
+const idx = filename.lastIndexOf('.');
+if (idx === -1) return '';
+return filename.substring(idx + 1);
 }
-
-// ===== Lọc watermark LuatVietnam =====
-finalText = finalText.replace(/(www.LuatVietnam.vn\s*){2,}/gi, "");
-finalText = finalText.replace(/www.LuatVietnam.vn/gi, "");   
-const lines = finalText.split(/\r?\n/);
-
-const cleaned = lines.filter(line => {
-
-const t = line.replace(/\s+/g, "").toLowerCase();
-
-if (t === "") return true;
-
-if (t === "www.luatvietnam.vn") return false;
-
-if (t === "luatvietnam.vn") return false;
-
-if (/^(www\.?luatvietnam\.vn)+$/i.test(t)) return false;
-
-return true;
-
-});
-
-finalText = cleaned.join("\n").replace(/\n{3,}/g, "\n\n");
-
-output.innerText = finalText;
-
-// ===== TXT =====
-if (file.name.toLowerCase().endsWith(".txt")) {
-
-    const text = await file.text();
-    output.innerText = text;
-    saveDocument({
-id: Date.now().toString(),
-title: file.name,
-type: "txt",
-source: "local",
-createdAt: Date.now(),
-content: text
-});
-    return;
-}
-    
-// ===== PDF =====
-if (file.type === "application/pdf") {
-
-    const pdf = await pdfjsLib.getDocument({
-        data: await file.arrayBuffer()
-    }).promise;
-
-    let text = "";
-
-    for (let i = 1; i <= pdf.numPages; i++) {
-
-        const page = await pdf.getPage(i);
-        const content = await page.getTextContent();
-
-        text += content.items
-            .map(item => item.str)
-            .join(" ") + "\n";
-    }
-
-    if (text.trim().length < 20) {
-await readPDFWithOCR(file);
-} else {
-output.innerText = text;
-}
-saveDocument({
-id: Date.now().toString(),
-title: file.name,
-type: "pdf",
-source: "local",
-createdAt: Date.now(),
-content: text
-});    
-return;
-}
-
-// ===== DOCX =====
-if (file.name.toLowerCase().endsWith(".docx")) {
-
-    const arrayBuffer = await file.arrayBuffer();
-
-    const result = await mammoth.extractRawText({
-        arrayBuffer: arrayBuffer
-    });
-
-    output.innerText = result.value;
-    saveDocument({
-id: Date.now().toString(),
-title: file.name,
-type: "docx",
-source: "local",
-createdAt: Date.now(),
-content: result.value
-});
-    return;
-}
-
-// ===== Chưa hỗ trợ =====
-if (file.name.toLowerCase().endsWith(".doc")) {
-output.innerText =
-"HTTV chưa hỗ trợ file .DOC (Word 97-2003).\n\nVui lòng mở file bằng Microsoft Word hoặc LibreOffice và lưu lại dưới định dạng .DOCX, sau đó thêm lại vào HTTV.";
-} else {
-output.innerText =
-"HTTV hiện hỗ trợ TXT, PDF và DOCX.";
-}
-}
-async function readPDFWithOCR(file) {
-
-const output = document.getElementById("documentContent");
-
-output.innerHTML = "Đang nhận dạng chữ từ PDF scan...";
-
-const pdf = await pdfjsLib.getDocument({
-    data: await file.arrayBuffer()
-}).promise;
-
-let finalText = "";
-
-for (let i = 1; i <= pdf.numPages; i++) {
-
-output.innerHTML = `Đang OCR trang ${i}/${pdf.numPages}...`;
-
-const page = await pdf.getPage(i);
-const viewport = page.getViewport({ scale: 2 });
-
-const canvas = document.createElement("canvas");
-const context = canvas.getContext("2d");
-
-canvas.width = viewport.width;
-canvas.height = viewport.height;
-
-await page.render({
-    canvasContext: context,
-    viewport: viewport
-}).promise;
-
-const result = await Tesseract.recognize(canvas, "vie+eng");
-
-finalText += `\n===== Trang ${i} =====\n`;
-finalText += result.data.text + "\n";
-
-}
-
-// ===== Lọc watermark LuatVietnam =====
-finalText = finalText.replace(/(www.LuatVietnam.vn\s*){2,}/gi, "");
-finalText = finalText.replace(/www.LuatVietnam.vn/gi, "");   
-const lines = finalText.split(/\r?\n/);
-
-const cleaned = lines.filter(line => {
-
-const t = line.replace(/\s+/g, "").toLowerCase();
-
-if (t === "") return true;
-
-if (t === "www.luatvietnam.vn") return false;
-
-if (t === "luatvietnam.vn") return false;
-
-if (/^(www\.?luatvietnam\.vn)+$/i.test(t)) return false;
-
-return true;
-
-});
-
-finalText = cleaned.join("\n").replace(/\n{3,}/g, "\n\n");
-
-output.innerText = finalText;
-saveDocument({
-id: Date.now().toString(),
-title: file.name,
-type: "pdf-ocr",
-source: "local",
-createdAt: Date.now(),
-content: finalText
-});
-}
-
