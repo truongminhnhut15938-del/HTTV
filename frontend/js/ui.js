@@ -1,6 +1,5 @@
 const content = document.getElementById("content");
 
-// Hiển thị thông tin file
 function showFileInfo(file, text = "") {
 
     const sizeKB = (file.size / 1024).toFixed(2);
