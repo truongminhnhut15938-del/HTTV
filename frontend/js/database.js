@@ -49,3 +49,27 @@ return new Promise((resolve, reject) => {
 });
 
 }
+function saveDocument(doc) {
+
+return new Promise((resolve, reject) => {
+
+    const tx = httvDB.transaction(
+        HTTV_STORE,
+        "readwrite"
+    );
+
+    const store = tx.objectStore(HTTV_STORE);
+
+    store.put(doc);
+
+    tx.oncomplete = function() {
+        resolve();
+    };
+
+    tx.onerror = function() {
+        reject(tx.error);
+    };
+
+});
+
+}
