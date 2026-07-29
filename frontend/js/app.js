@@ -16,6 +16,11 @@ document.addEventListener(
 "DOMContentLoaded",
 function(){
 
+openDatabase().then(function(){
+console.log("HTTV Database đã sẵn sàng");
+}).catch(function(err){
+console.error("Lỗi mở database:", err);
+});
 
 
     const btnUpload =
