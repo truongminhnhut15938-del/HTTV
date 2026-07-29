@@ -57,3 +57,23 @@ if (file.name.toLowerCase().endsWith(".docx")) {
 output.innerText = "HTTV hiện hỗ trợ TXT, PDF và DOCX.";
 
 }
+async function readPDFWithOCR(file) {
+
+const output = document.getElementById("documentContent");
+
+output.innerHTML = "Đang nhận dạng chữ từ PDF scan...";
+
+const dataUrl = await new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.readAsDataURL(file);
+});
+
+const result = await Tesseract.recognize(
+    dataUrl,
+    "vie+eng"
+);
+
+output.innerText = result.data.text;
+
+}
