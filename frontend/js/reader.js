@@ -14,10 +14,11 @@ if (file.name.toLowerCase().endsWith(".txt")) {
 
     const text = await file.text();
     output.innerText = text;
+    return;
 }
 
 // ===== PDF =====
-else if (file.type === "application/pdf") {
+if (file.type === "application/pdf") {
 
     const pdf = await pdfjsLib.getDocument({
         data: await file.arrayBuffer()
@@ -36,10 +37,11 @@ else if (file.type === "application/pdf") {
     }
 
     output.innerText = text;
+    return;
 }
 
 // ===== DOCX =====
-else if (file.name.toLowerCase().endsWith(".docx")) {
+if (file.name.toLowerCase().endsWith(".docx")) {
 
     const arrayBuffer = await file.arrayBuffer();
 
@@ -48,13 +50,10 @@ else if (file.name.toLowerCase().endsWith(".docx")) {
     });
 
     output.innerText = result.value;
+    return;
 }
 
 // ===== Chưa hỗ trợ =====
-else {
-
-    output.innerText =
-        "HTTV hiện hỗ trợ TXT, PDF và DOCX.";
-}
+output.innerText = "HTTV hiện hỗ trợ TXT, PDF và DOCX.";
 
 }
