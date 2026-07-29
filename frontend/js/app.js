@@ -6,7 +6,7 @@ fileInput.addEventListener("change", handleFileSelected);
 
 function openFileDialog() {
     fileInput.click();
-
+}
 async function handleFileSelected() {
 
     if (fileInput.files.length === 0) {
