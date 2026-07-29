@@ -14,9 +14,17 @@ if (file.name.toLowerCase().endsWith(".txt")) {
 
     const text = await file.text();
     output.innerText = text;
+    saveDocument({
+id: Date.now().toString(),
+title: file.name,
+type: "txt",
+source: "local",
+createdAt: Date.now(),
+content: text
+});
     return;
 }
-
+    
 // ===== PDF =====
 if (file.type === "application/pdf") {
 
@@ -41,6 +49,14 @@ await readPDFWithOCR(file);
 } else {
 output.innerText = text;
 }
+saveDocument({
+id: Date.now().toString(),
+title: file.name,
+type: "pdf",
+source: "local",
+createdAt: Date.now(),
+content: text
+});    
 return;
 }
 
@@ -54,6 +70,14 @@ if (file.name.toLowerCase().endsWith(".docx")) {
     });
 
     output.innerText = result.value;
+    saveDocument({
+id: Date.now().toString(),
+title: file.name,
+type: "docx",
+source: "local",
+createdAt: Date.now(),
+content: result.value
+});
     return;
 }
 
