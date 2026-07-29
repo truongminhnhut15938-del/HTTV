@@ -6,9 +6,8 @@ fileInput.addEventListener("change", handleFileSelected);
 
 function openFileDialog() {
     fileInput.click();
-}
 
-function handleFileSelected() {
+async function handleFileSelected() {
 
     if (fileInput.files.length === 0) {
         return;
@@ -16,23 +15,24 @@ function handleFileSelected() {
 
     const file = fileInput.files[0];
 
-    if (file.name.toLowerCase().endsWith(".txt")) {
+    try {
 
-        const reader = new FileReader();
+        content.innerHTML = `
+            <h2>⏳ Đang đọc tài liệu...</h2>
+            <p>Vui lòng chờ vài giây.</p>
+        `;
 
-        reader.onload = function (e) {
+        const text = await readDocument(file);
 
-            showFileInfo(file, e.target.result);
+        showFileInfo(file, text);
 
-        };
+    } catch (error) {
 
-        reader.readAsText(file, "UTF-8");
-
-    } else {
+        console.error(error);
 
         showFileInfo(
             file,
-            "Định dạng này sẽ được hỗ trợ ở các phiên bản tiếp theo."
+            "❌ Không thể đọc tài liệu này.\n\n" + error.message
         );
 
     }
