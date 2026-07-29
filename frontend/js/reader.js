@@ -36,8 +36,12 @@ if (file.type === "application/pdf") {
             .join(" ") + "\n";
     }
 
-    output.innerText = text;
-    return;
+    if (text.trim().length < 20) {
+await readPDFWithOCR(file);
+} else {
+output.innerText = text;
+}
+return;
 }
 
 // ===== DOCX =====
