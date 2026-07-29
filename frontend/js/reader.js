@@ -80,36 +80,51 @@ let finalText = "";
 
 for (let i = 1; i <= pdf.numPages; i++) {
 
-    output.innerHTML =
-        `Đang OCR trang ${i}/${pdf.numPages}...`;
+output.innerHTML = `Đang OCR trang ${i}/${pdf.numPages}...`;
 
-    const page = await pdf.getPage(i);
+const page = await pdf.getPage(i);
+const viewport = page.getViewport({ scale: 2 });
 
-    const viewport = page.getViewport({ scale: 2 });
+const canvas = document.createElement("canvas");
+const context = canvas.getContext("2d");
 
-    const canvas = document.createElement("canvas");
-    const context = canvas.getContext("2d");
+canvas.width = viewport.width;
+canvas.height = viewport.height;
 
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
+await page.render({
+    canvasContext: context,
+    viewport: viewport
+}).promise;
 
-    await page.render({
-        canvasContext: context,
-        viewport: viewport
-    }).promise;
+const result = await Tesseract.recognize(canvas, "vie+eng");
 
-    const result = await Tesseract.recognize(
-        canvas,
-        "vie+eng"
-    );
+finalText += `\n===== Trang ${i} =====\n`;
+finalText += result.data.text + "\n";
 
-    finalText +=
-        `\n===== Trang ${i} =====\n`;
-
-    finalText += result.data.text + "\n";
-    finalText = finalText.replace(/www\.LuatVietnam\.vn/gi, "");
-    finalText = finalText.replace(/LuatVietnam/gi, "");
 }
+
+// ===== Lọc watermark LuatVietnam =====
+finalText = finalText.replace(/(www.LuatVietnam.vn\s*){2,}/gi, "");
+finalText = finalText.replace(/www.LuatVietnam.vn/gi, "");   
+const lines = finalText.split(/\r?\n/);
+
+const cleaned = lines.filter(line => {
+
+const t = line.replace(/\s+/g, "").toLowerCase();
+
+if (t === "") return true;
+
+if (t === "www.luatvietnam.vn") return false;
+
+if (t === "luatvietnam.vn") return false;
+
+if (/^(www\.?luatvietnam\.vn)+$/i.test(t)) return false;
+
+return true;
+
+});
+
+finalText = cleaned.join("\n").replace(/\n{3,}/g, "\n\n");
 
 output.innerText = finalText;
 
