@@ -51,6 +51,8 @@ return result.value;
 
 }
 
+const content = document.getElementById("content");
+
 function showFileInfo(file, text) {
 
 const sizeKB = (file.size / 1024).toFixed(2);
