@@ -67,17 +67,43 @@ const output = document.getElementById("documentContent");
 
 output.innerHTML = "Đang nhận dạng chữ từ PDF scan...";
 
-const dataUrl = await new Promise(resolve => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.readAsDataURL(file);
-});
+const pdf = await pdfjsLib.getDocument({
+    data: await file.arrayBuffer()
+}).promise;
 
-const result = await Tesseract.recognize(
-    dataUrl,
-    "vie+eng"
-);
+let finalText = "";
 
-output.innerText = result.data.text;
+for (let i = 1; i <= pdf.numPages; i++) {
+
+    output.innerHTML =
+        `Đang OCR trang ${i}/${pdf.numPages}...`;
+
+    const page = await pdf.getPage(i);
+
+    const viewport = page.getViewport({ scale: 2 });
+
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+
+    await page.render({
+        canvasContext: context,
+        viewport: viewport
+    }).promise;
+
+    const result = await Tesseract.recognize(
+        canvas,
+        "vie+eng"
+    );
+
+    finalText +=
+        `\n===== Trang ${i} =====\n`;
+
+    finalText += result.data.text + "\n";
+}
+
+output.innerText = finalText;
 
 }
