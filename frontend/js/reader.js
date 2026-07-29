@@ -46,6 +46,7 @@ if (file.type === "application/pdf") {
 
     if (text.trim().length < 20) {
 await readPDFWithOCR(file);
+return;
 } else {
 output.innerText = text;
 }
