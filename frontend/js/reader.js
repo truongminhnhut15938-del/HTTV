@@ -107,6 +107,8 @@ for (let i = 1; i <= pdf.numPages; i++) {
         `\n===== Trang ${i} =====\n`;
 
     finalText += result.data.text + "\n";
+    finalText = finalText.replace(/www\.LuatVietnam\.vn/gi, "");
+    finalText = finalText.replace(/LuatVietnam/gi, "");
 }
 
 output.innerText = finalText;
