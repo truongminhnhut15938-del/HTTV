@@ -58,8 +58,13 @@ if (file.name.toLowerCase().endsWith(".docx")) {
 }
 
 // ===== Chưa hỗ trợ =====
-output.innerText = "HTTV hiện hỗ trợ TXT, PDF và DOCX.";
-
+if (file.name.toLowerCase().endsWith(".doc")) {
+output.innerText =
+"HTTV chưa hỗ trợ file .DOC (Word 97-2003).\n\nVui lòng mở file bằng Microsoft Word hoặc LibreOffice và lưu lại dưới định dạng .DOCX, sau đó thêm lại vào HTTV.";
+} else {
+output.innerText =
+"HTTV hiện hỗ trợ TXT, PDF và DOCX.";
+}
 }
 async function readPDFWithOCR(file) {
 
