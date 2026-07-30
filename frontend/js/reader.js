@@ -1,10 +1,12 @@
 // ======================================
 // HTTV - READER.JS
-// Đọc TXT, DOCX, PDF văn bản và PDF scan OCR
-// Phiên bản tối ưu cho tài liệu pháp lý tiếng Việt
+// Đọc TXT, DOCX, PDF bằng OCR tiếng Việt
+// Phiên bản tối ưu cho tài liệu pháp lý Việt Nam
 // ======================================
 
-// Khai báo worker của PDF.js
+console.log("HTTV OCR VERSION 3");
+
+// Worker của PDF.js
 pdfjsLib.GlobalWorkerOptions.workerSrc =
 "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
@@ -32,34 +34,11 @@ return result.value;
 
 // ======================================
 // PDF
+// Luôn dùng OCR để tránh lỗi lớp text của LuatVietnam
 // ======================================
 async function parsePDF(file) {
 
-const pdf = await pdfjsLib.getDocument({
-    data: await file.arrayBuffer()
-}).promise;
-
-let text = "";
-
-// Đọc lớp văn bản có sẵn
-for (let i = 1; i <= pdf.numPages; i++) {
-
-    const page = await pdf.getPage(i);
-
-    const content = await page.getTextContent();
-
-    text += content.items
-        .map(item => item.str)
-        .join(" ") + "\n";
-
-}
-
-// Nếu PDF gần như không có văn bản thì dùng OCR
-if (text.trim().length < 20) {
-    return await parsePDFWithOCR(file);
-}
-
-return cleanText(text);
+return await parsePDFWithOCR(file);
 
 }
 
@@ -95,7 +74,10 @@ for (let i = 1; i <= pdf.numPages; i++) {
         viewport: viewport
     }).promise;
 
+    // ==================================
+    // Tiền xử lý ảnh
     // Chuyển sang đen trắng để OCR tốt hơn
+    // ==================================
     const img = context.getImageData(
         0,
         0,
@@ -122,12 +104,14 @@ for (let i = 1; i <= pdf.numPages; i++) {
 
     context.putImageData(img, 0, 0);
 
-    // OCR chuyên cho văn bản tiếng Việt
+    // ==================================
+    // OCR tiếng Việt
+    // ==================================
     const result = await Tesseract.recognize(
         canvas,
         "vie",
         {
-            tessedit_pageseg_mode: Tesseract.PSM.SINGLE_BLOCK,
+            tessedit_pageseg_mode: Tesseract.PSM.AUTO,
             preserve_interword_spaces: "1"
         }
     );
@@ -186,7 +170,7 @@ return text.trim();
 }
 
 // ======================================
-// Xử lý tài liệu và lưu IndexedDB
+// Xử lý tài liệu và lưu vào IndexedDB
 // ======================================
 async function processDocument(file) {
 
