@@ -1,31 +1,55 @@
-<script>
+<!DOCTYPE html><html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HTTV OCR Test</title>
+</head>
+<body style="font-family: Arial; padding: 20px;"><h2>HTTV OCR Test</h2><input type="file" id="pdfFile" accept=".pdf">
+<br><br><button onclick="uploadPDF()">Đọc PDF</button>
+
+<hr><pre id="result" style="white-space: pre-wrap;"></pre><script>
 async function uploadPDF() {
-  const file = document.getElementById('pdfFile').files[0];
+
+  const file =
+    document.getElementById('pdfFile').files[0];
+
   if (!file) {
     alert('Chưa chọn file PDF');
     return;
   }
 
-  const resultBox = document.getElementById('result');
-  resultBox.textContent = 'Đang gửi PDF lên server...';
+  const result =
+    document.getElementById('result');
+
+  result.textContent =
+    'Đang gửi PDF lên server...';
 
   try {
+
     const formData = new FormData();
+
     formData.append('file', file);
 
-    const res = await fetch('https://httv-ocr-backend.onrender.com/ocr', {
-      method: 'POST',
-      body: formData
-    });
+    const res = await fetch(
+      'https://httv-ocr-backend.onrender.com/ocr',
+      {
+        method: 'POST',
+        body: formData
+      }
+    );
 
     const text = await res.text();
 
-    resultBox.textContent =
+    result.textContent =
       'HTTP ' + res.status + '\\n\\n' + text;
 
   } catch (e) {
-    resultBox.textContent =
-      'Lỗi fetch: ' + e.message;
+
+    result.textContent =
+      'Lỗi: ' + e.message;
+
   }
+
 }
-</script>
+</script></body>
+</html>
