@@ -1,0 +1,26 @@
+<!DOCTYPE html><html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Test HTTV OCR</title>
+</head>
+<body>
+  <h2>Test OCR Backend</h2>  <input type="file" id="pdfFile" accept=".pdf">
+  <button onclick="uploadPDF()">Đọc PDF</button>  <pre id="result" style="white-space: pre-wrap;"></pre>  <script>
+    async function uploadPDF() {
+      const file = document.getElementById('pdfFile').files[0];
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('https://httv-ocr-backend.onrender.com/ocr', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await res.json();
+      document.getElementById('result').textContent =
+        data.success ? data.text : data.error;
+    }
+  </script></body>
+</html>
