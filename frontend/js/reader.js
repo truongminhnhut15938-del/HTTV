@@ -1,5 +1,5 @@
 // ======================================
-// HTTV - PARSER.JS
+// HTTV - READER.JS
 // Đọc TXT, DOCX, PDF và PDF scan OCR
 // ======================================
 
@@ -7,16 +7,16 @@
 pdfjsLib.GlobalWorkerOptions.workerSrc =
 "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
-// ================================
+// ======================================
 // TXT
-// ================================
+// ======================================
 async function parseTXT(file) {
 return await file.text();
 }
 
-// ================================
+// ======================================
 // DOCX
-// ================================
+// ======================================
 async function parseDOCX(file) {
 
 const arrayBuffer = await file.arrayBuffer();
@@ -29,9 +29,9 @@ return result.value;
 
 }
 
-// ================================
+// ======================================
 // PDF
-// ================================
+// ======================================
 async function parsePDF(file) {
 
 const pdf = await pdfjsLib.getDocument({
@@ -40,7 +40,6 @@ const pdf = await pdfjsLib.getDocument({
 
 let text = "";
 
-// Đọc văn bản trực tiếp
 for (let i = 1; i <= pdf.numPages; i++) {
 
     const page = await pdf.getPage(i);
@@ -64,9 +63,9 @@ return cleanText(text);
 
 }
 
-// ================================
+// ======================================
 // PDF Scan OCR
-// ================================
+// ======================================
 async function parsePDFWithOCR(file) {
 
 const pdf = await pdfjsLib.getDocument({
@@ -112,9 +111,9 @@ return cleanText(finalText);
 
 }
 
-// ================================
+// ======================================
 // Chuẩn hóa văn bản
-// ================================
+// ======================================
 function cleanText(text) {
 
 // Xóa watermark LuatVietnam
@@ -151,5 +150,85 @@ text = text.replace(/\\n{3,}/g, "\n\n");
 text = text.replace(/[ \\t]{2,}/g, " ");
 
 return text.trim();
+
+}
+
+// ======================================
+// Xử lý tài liệu và lưu IndexedDB
+// ======================================
+async function processDocument(file) {
+
+const name = file.name;
+
+const type = file.type || getFileExtension(file.name);
+
+let text = "";
+
+if (name.toLowerCase().endsWith(".txt")) {
+
+    text = await parseTXT(file);
+
+} else if (name.toLowerCase().endsWith(".docx")) {
+
+    text = await parseDOCX(file);
+
+} else if (name.toLowerCase().endsWith(".pdf")) {
+
+    text = await parsePDF(file);
+
+} else if (name.toLowerCase().endsWith(".doc")) {
+
+    throw new Error(
+        "HTTV chưa hỗ trợ file .DOC. Vui lòng chuyển sang .DOCX."
+    );
+
+} else {
+
+    throw new Error(
+        "Định dạng chưa được hỗ trợ"
+    );
+
+}
+
+const documentData = {
+
+    id: Date.now().toString(),
+
+    name: name,
+
+    title: name,
+
+    type: type,
+
+    source: "local",
+
+    size: file.size,
+
+    content: text,
+
+    createdAt: Date.now()
+
+};
+
+if (typeof saveDocument === "function") {
+
+    await saveDocument(documentData);
+
+}
+
+return documentData;
+
+}
+
+// ======================================
+// Lấy phần mở rộng file
+// ======================================
+function getFileExtension(filename) {
+
+const idx = filename.lastIndexOf(".");
+
+if (idx === -1) return "";
+
+return filename.substring(idx + 1);
 
 }
