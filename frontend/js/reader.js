@@ -1,6 +1,7 @@
 // ======================================
 // HTTV - READER.JS
-// Đọc TXT, DOCX, PDF và PDF scan OCR
+// Đọc TXT, DOCX, PDF văn bản và PDF scan OCR
+// Phiên bản tối ưu cho tài liệu pháp lý tiếng Việt
 // ======================================
 
 // Khai báo worker của PDF.js
@@ -40,6 +41,7 @@ const pdf = await pdfjsLib.getDocument({
 
 let text = "";
 
+// Đọc lớp văn bản có sẵn
 for (let i = 1; i <= pdf.numPages; i++) {
 
     const page = await pdf.getPage(i);
@@ -52,11 +54,9 @@ for (let i = 1; i <= pdf.numPages; i++) {
 
 }
 
-// Nếu PDF gần như không có chữ thì chuyển sang OCR
+// Nếu PDF gần như không có văn bản thì dùng OCR
 if (text.trim().length < 20) {
-
     return await parsePDFWithOCR(file);
-
 }
 
 return cleanText(text);
@@ -78,7 +78,7 @@ for (let i = 1; i <= pdf.numPages; i++) {
 
     const page = await pdf.getPage(i);
 
-    // Tăng độ phân giải OCR
+    // Render ở độ phân giải cao
     const viewport = page.getViewport({
         scale: 4
     });
@@ -95,9 +95,41 @@ for (let i = 1; i <= pdf.numPages; i++) {
         viewport: viewport
     }).promise;
 
+    // Chuyển sang đen trắng để OCR tốt hơn
+    const img = context.getImageData(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    const data = img.data;
+
+    for (let p = 0; p < data.length; p += 4) {
+
+        const gray =
+            data[p] * 0.299 +
+            data[p + 1] * 0.587 +
+            data[p + 2] * 0.114;
+
+        const value = gray > 180 ? 255 : 0;
+
+        data[p] = value;
+        data[p + 1] = value;
+        data[p + 2] = value;
+
+    }
+
+    context.putImageData(img, 0, 0);
+
+    // OCR chuyên cho văn bản tiếng Việt
     const result = await Tesseract.recognize(
         canvas,
-        "vie+eng"
+        "vie",
+        {
+            tessedit_pageseg_mode: Tesseract.PSM.SINGLE_BLOCK,
+            preserve_interword_spaces: "1"
+        }
     );
 
     finalText +=
@@ -160,8 +192,6 @@ async function processDocument(file) {
 
 const name = file.name;
 
-const type = file.type || getFileExtension(file.name);
-
 let text = "";
 
 if (name.toLowerCase().endsWith(".txt")) {
@@ -185,7 +215,7 @@ if (name.toLowerCase().endsWith(".txt")) {
 } else {
 
     throw new Error(
-        "Định dạng chưa được hỗ trợ"
+        "Định dạng chưa được hỗ trợ."
     );
 
 }
@@ -198,7 +228,11 @@ const documentData = {
 
     title: name,
 
-    type: type,
+    type: name.toLowerCase().endsWith(".pdf")
+        ? "pdf"
+        : name.toLowerCase().endsWith(".docx")
+        ? "docx"
+        : "txt",
 
     source: "local",
 
@@ -217,18 +251,5 @@ if (typeof saveDocument === "function") {
 }
 
 return documentData;
-
-}
-
-// ======================================
-// Lấy phần mở rộng file
-// ======================================
-function getFileExtension(filename) {
-
-const idx = filename.lastIndexOf(".");
-
-if (idx === -1) return "";
-
-return filename.substring(idx + 1);
 
 }
