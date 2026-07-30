@@ -1,55 +1,51 @@
 <!DOCTYPE html><html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HTTV OCR Test</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HTTV OCR Test</title>
 </head>
-<body style="font-family: Arial; padding: 20px;"><h2>HTTV OCR Test</h2><input type="file" id="pdfFile" accept=".pdf">
-<br><br><button onclick="uploadPDF()">Đọc PDF</button>
+<body><h2>HTTV OCR Test</h2><input type="file" id="pdfFile" accept=".pdf">
+<button id="btn">Đọc PDF</button><pre id="result"></pre><script>
+document.getElementById('btn').onclick = async () => {
 
-<hr><pre id="result" style="white-space: pre-wrap;"></pre><script>
-async function uploadPDF() {
+const file = document.getElementById('pdfFile').files[0];
 
-  const file =
-    document.getElementById('pdfFile').files[0];
+if (!file) {
+alert('Chưa chọn file');
+return;
+}
 
-  if (!file) {
-    alert('Chưa chọn file PDF');
-    return;
-  }
+const result = document.getElementById('result');
 
-  const result =
-    document.getElementById('result');
+result.textContent = 'Đang gửi...';
 
-  result.textContent =
-    'Đang gửi PDF lên server...';
+try {
 
-  try {
+const formData = new FormData();
+formData.append('file', file);
 
-    const formData = new FormData();
+const response = await fetch(
+'https://httv-ocr-backend.onrender.com/ocr',
+{
+method: 'POST',
+body: formData
+}
+);
 
-    formData.append('file', file);
+result.textContent =
+'HTTP: ' + response.status + '\\n';
 
-    const res = await fetch(
-      'https://httv-ocr-backend.onrender.com/ocr',
-      {
-        method: 'POST',
-        body: formData
-      }
-    );
+const text = await response.text();
 
-    const text = await res.text();
+result.textContent += text;
 
-    result.textContent =
-      'HTTP ' + res.status + '\\n\\n' + text;
+} catch (e) {
 
-  } catch (e) {
-
-    result.textContent =
-      'Lỗi: ' + e.message;
-
-  }
+result.textContent =
+'FETCH ERROR: ' + e.message;
 
 }
+
+};
 </script></body>
 </html>
