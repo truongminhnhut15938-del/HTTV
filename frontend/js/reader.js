@@ -1,10 +1,15 @@
 // ======================================
 // HTTV - READER.JS
-// Đọc TXT, DOCX, PDF bằng OCR.space
-// Phiên bản tối ưu cho tài liệu pháp lý Việt Nam
+// Phiên bản ổn định
+// Hỗ trợ: TXT, DOCX, PDF (văn bản)
+// Không sử dụng OCR
 // ======================================
 
-console.log("HTTV OCR VERSION 4 - OCR.space");
+console.log("HTTV Reader - Stable Version");
+
+// Worker của PDF.js
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+"https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
 // ======================================
 // TXT
@@ -29,59 +34,29 @@ return result.value;
 }
 
 // ======================================
-// PDF
-// Luôn dùng OCR.space để tránh lỗi lớp text
+// PDF (văn bản)
 // ======================================
 async function parsePDF(file) {
 
-return await parsePDFWithOCR(file);
+const pdf = await pdfjsLib.getDocument({
+    data: await file.arrayBuffer()
+}).promise;
+
+let text = "";
+
+for (let i = 1; i <= pdf.numPages; i++) {
+
+    const page = await pdf.getPage(i);
+
+    const content = await page.getTextContent();
+
+    text += content.items
+        .map(item => item.str)
+        .join(" ") + "\n";
 
 }
 
-// ======================================
-// OCR.space API
-// ======================================
-async function parsePDFWithOCR(file) {
-
-const formData = new FormData();
-
-formData.append("file", file);
-
-formData.append("language", "vie");
-
-formData.append("isOverlayRequired", "false");
-
-formData.append("OCREngine", "2");
-
-const response = await fetch(
-    "https://api.ocr.space/parse/image",
-    {
-        method: "POST",
-        headers: {
-            apikey: "K87344919388957"
-        },
-        body: formData
-    }
-);
-
-const data = await response.json();
-
-if (!data.ParsedResults) {
-    throw new Error(
-        "OCR.space không đọc được tài liệu PDF."
-    );
-}
-
-let finalText = "";
-
-for (const page of data.ParsedResults) {
-
-    finalText +=
-        page.ParsedText + "\n";
-
-}
-
-return cleanText(finalText);
+return cleanText(text);
 
 }
 
@@ -90,47 +65,18 @@ return cleanText(finalText);
 // ======================================
 function cleanText(text) {
 
-text = text.replace(/(www\\.LuatVietnam\\.vn\\s*){2,}/gi, "");
-
-text = text.replace(/www\\.LuatVietnam\\.vn/gi, "");
-
-text = text.replace(/LuatVietnam/gi, "");
-
-const lines = text.split(/\\r?\\n/);
-
-const cleaned = lines.filter(line => {
-
-    const t =
-        line.replace(/\\s+/g, "")
-            .toLowerCase();
-
-    if (t === "") return true;
-
-    if (t === "www.luatvietnam.vn")
-        return false;
-
-    if (t === "luatvietnam.vn")
-        return false;
-
-    if (/^(www\\.?luatvietnam\\.vn)+$/i.test(t))
-        return false;
-
-    return true;
-
-});
-
-text = cleaned.join("\n");
-
-text = text.replace(/\\n{3,}/g, "\n\n");
+text = text.replace(/\\r/g, "");
 
 text = text.replace(/[ \\t]{2,}/g, " ");
+
+text = text.replace(/\\n{3,}/g, "\n\n");
 
 return text.trim();
 
 }
 
 // ======================================
-// Xử lý tài liệu và lưu IndexedDB
+// Xử lý tài liệu
 // ======================================
 async function processDocument(file) {
 
@@ -195,5 +141,39 @@ if (typeof saveDocument === "function") {
 }
 
 return documentData;
+
+}
+
+// ======================================
+// Hiển thị tài liệu lên giao diện
+// ======================================
+async function readDocument(file) {
+
+const output =
+    document.getElementById("documentContent");
+
+if (!output) {
+
+    alert("Chưa có vùng hiển thị nội dung");
+
+    return;
+
+}
+
+output.innerHTML = "Đang đọc tài liệu...";
+
+try {
+
+    const documentData =
+        await processDocument(file);
+
+    output.innerText = documentData.content;
+
+} catch (err) {
+
+    output.innerText =
+        "Lỗi: " + err.message;
+
+}
 
 }
