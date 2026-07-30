@@ -1,14 +1,10 @@
 // ======================================
 // HTTV - READER.JS
-// Đọc TXT, DOCX, PDF bằng OCR tiếng Việt
+// Đọc TXT, DOCX, PDF bằng OCR.space
 // Phiên bản tối ưu cho tài liệu pháp lý Việt Nam
 // ======================================
 
-console.log("HTTV OCR VERSION 3");
-
-// Worker của PDF.js
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-"https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+console.log("HTTV OCR VERSION 4 - OCR.space");
 
 // ======================================
 // TXT
@@ -34,7 +30,7 @@ return result.value;
 
 // ======================================
 // PDF
-// Luôn dùng OCR để tránh lỗi lớp text của LuatVietnam
+// Luôn dùng OCR.space để tránh lỗi lớp text
 // ======================================
 async function parsePDF(file) {
 
@@ -43,83 +39,45 @@ return await parsePDFWithOCR(file);
 }
 
 // ======================================
-// PDF Scan OCR
+// OCR.space API
 // ======================================
 async function parsePDFWithOCR(file) {
 
-const pdf = await pdfjsLib.getDocument({
-    data: await file.arrayBuffer()
-}).promise;
+const formData = new FormData();
+
+formData.append("file", file);
+
+formData.append("language", "vie");
+
+formData.append("isOverlayRequired", "false");
+
+formData.append("OCREngine", "2");
+
+const response = await fetch(
+    "https://api.ocr.space/parse/image",
+    {
+        method: "POST",
+        headers: {
+            apikey: "K87344919388957"
+        },
+        body: formData
+    }
+);
+
+const data = await response.json();
+
+if (!data.ParsedResults) {
+    throw new Error(
+        "OCR.space không đọc được tài liệu PDF."
+    );
+}
 
 let finalText = "";
 
-for (let i = 1; i <= pdf.numPages; i++) {
-
-    const page = await pdf.getPage(i);
-
-    // Render ở độ phân giải cao
-    const viewport = page.getViewport({
-        scale: 4
-    });
-
-    const canvas = document.createElement("canvas");
-
-    const context = canvas.getContext("2d");
-
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-
-    await page.render({
-        canvasContext: context,
-        viewport: viewport
-    }).promise;
-
-    // ==================================
-    // Tiền xử lý ảnh
-    // Chuyển sang đen trắng để OCR tốt hơn
-    // ==================================
-    const img = context.getImageData(
-        0,
-        0,
-        canvas.width,
-        canvas.height
-    );
-
-    const data = img.data;
-
-    for (let p = 0; p < data.length; p += 4) {
-
-        const gray =
-            data[p] * 0.299 +
-            data[p + 1] * 0.587 +
-            data[p + 2] * 0.114;
-
-        const value = gray > 180 ? 255 : 0;
-
-        data[p] = value;
-        data[p + 1] = value;
-        data[p + 2] = value;
-
-    }
-
-    context.putImageData(img, 0, 0);
-
-    // ==================================
-    // OCR tiếng Việt
-    // ==================================
-    const result = await Tesseract.recognize(
-        canvas,
-        "vie",
-        {
-            tessedit_pageseg_mode: Tesseract.PSM.AUTO,
-            preserve_interword_spaces: "1"
-        }
-    );
+for (const page of data.ParsedResults) {
 
     finalText +=
-        "\n===== Trang " + i + " =====\n";
-
-    finalText += result.data.text + "\n";
+        page.ParsedText + "\n";
 
 }
 
@@ -132,27 +90,30 @@ return cleanText(finalText);
 // ======================================
 function cleanText(text) {
 
-// Xóa watermark LuatVietnam
 text = text.replace(/(www\\.LuatVietnam\\.vn\\s*){2,}/gi, "");
 
 text = text.replace(/www\\.LuatVietnam\\.vn/gi, "");
 
 text = text.replace(/LuatVietnam/gi, "");
 
-// Xóa khoảng trắng thừa
 const lines = text.split(/\\r?\\n/);
 
 const cleaned = lines.filter(line => {
 
-    const t = line.replace(/\\s+/g, "").toLowerCase();
+    const t =
+        line.replace(/\\s+/g, "")
+            .toLowerCase();
 
     if (t === "") return true;
 
-    if (t === "www.luatvietnam.vn") return false;
+    if (t === "www.luatvietnam.vn")
+        return false;
 
-    if (t === "luatvietnam.vn") return false;
+    if (t === "luatvietnam.vn")
+        return false;
 
-    if (/^(www\\.?luatvietnam\\.vn)+$/i.test(t)) return false;
+    if (/^(www\\.?luatvietnam\\.vn)+$/i.test(t))
+        return false;
 
     return true;
 
@@ -160,7 +121,6 @@ const cleaned = lines.filter(line => {
 
 text = cleaned.join("\n");
 
-// Chuẩn hóa khoảng trắng
 text = text.replace(/\\n{3,}/g, "\n\n");
 
 text = text.replace(/[ \\t]{2,}/g, " ");
@@ -170,7 +130,7 @@ return text.trim();
 }
 
 // ======================================
-// Xử lý tài liệu và lưu vào IndexedDB
+// Xử lý tài liệu và lưu IndexedDB
 // ======================================
 async function processDocument(file) {
 
