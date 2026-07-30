@@ -3,299 +3,217 @@
 // Điều khiển chính ứng dụng
 // ================================
 
-
-// Lưu nội dung tài liệu hiện tại
-
 let currentFile = null;
 
-
-
 // Khi trang tải xong
+document.addEventListener("DOMContentLoaded", function () {
 
-document.addEventListener(
-"DOMContentLoaded",
-function(){
+// Mở cơ sở dữ liệu
+openDatabase()
+    .then(function () {
+        console.log("HTTV Database đã sẵn sàng");
+    })
+    .catch(function (err) {
+        console.error("Lỗi mở database:", err);
+    });
 
-openDatabase().then(function(){
-console.log("HTTV Database đã sẵn sàng");
-}).catch(function(err){
-console.error("Lỗi mở database:", err);
-});
+const btnUpload = document.getElementById("btnUpload");
+const fileInput = document.getElementById("fileInput");
+const btnSearch = document.getElementById("btnSearch");
 
+// ================================
+// Nút thêm tài liệu
+// ================================
+if (btnUpload) {
+    btnUpload.onclick = function () {
+        fileInput.click();
+    };
+}
 
-    const btnUpload =
-    document.getElementById("btnUpload");
+// ================================
+// Khi chọn file
+// ================================
+if (fileInput) {
+    fileInput.onchange = async function (event) {
 
+        const file = event.target.files[0];
 
-    const fileInput =
-    document.getElementById("fileInput");
+        if (!file) {
+            return;
+        }
 
+        currentFile = file;
 
-    const btnSearch =
-    document.getElementById("btnSearch");
+        showFileInfo(file);
 
+        try {
 
+            if (typeof processDocument === "function") {
 
-    // ================================
-    // Nút thêm tài liệu
-    // ================================
+                const documentData =
+                    await processDocument(file);
 
-    if(btnUpload){
+                const contentBox =
+                    document.getElementById("documentContent");
 
-        btnUpload.onclick = function(){
+                if (contentBox) {
+                    contentBox.innerText =
+                        documentData.content;
+                }
 
-            fileInput.click();
-
-        };
-
-    }
-
-
-
-    // ================================
-    // Khi chọn file
-    // ================================
-
-    if(fileInput){
-
-        fileInput.onchange = function(event){
-
-            const file =
-            event.target.files[0];
-
-
-            if(!file){
-                return;
-            }
-
-
-            currentFile = file;
-
-
-            showFileInfo(file);
-
-
-            // Gọi module đọc PDF/DOCX
-
-            if(typeof readDocument === "function"){
-
-                readDocument(file);
-
-            }
-
-            else{
+            } else {
 
                 alert(
-                "Chưa tải module reader.js"
+                    "Chưa tải module parser.js"
                 );
 
             }
 
+        } catch (err) {
 
-        };
+            console.error(err);
 
-    }
+            alert(
+                "Không thể đọc tài liệu: " +
+                err.message
+            );
 
+        }
 
+    };
+}
 
+// ================================
+// Nút tra cứu
+// ================================
+if (btnSearch) {
 
-    // ================================
-    // Nút tra cứu
-    // ================================
+    btnSearch.onclick = function () {
 
-    if(btnSearch){
+        const keyword =
+            document.getElementById("searchInput")
+            .value
+            .trim();
 
-        btnSearch.onclick=function(){
+        if (keyword === "") {
 
-
-            const keyword =
-            document.getElementById(
-            "searchInput"
-            ).value.trim();
-
-
-
-            if(keyword===""){
-
-                alert(
+            alert(
                 "Vui lòng nhập từ khóa"
-                );
+            );
 
-                return;
+            return;
 
-            }
+        }
 
+        searchDocument(keyword);
 
+    };
 
-            searchDocument(keyword);
-
-
-
-        };
-
-    }
-
-
+}
 
 });
-
-
-
-
 
 // =================================
 // Hiển thị thông tin file
 // =================================
+function showFileInfo(file) {
 
+const info =
+    document.getElementById("fileInfo");
 
-function showFileInfo(file){
+if (info) {
 
-
-    const info =
-    document.getElementById(
-    "fileInfo"
-    );
-
-
-
-    if(info){
-
-
-        let size =
+    let size =
         (file.size / 1024)
         .toFixed(2);
 
-
-
-        info.innerHTML =
+    info.innerHTML =
 
         `
-        <b>Tên:</b> ${file.name}<br>
-        <b>Loại:</b> ${file.type || "Không xác định"}<br>
-        <b>Dung lượng:</b> ${size} KB
-        `;
-
-
-    }
-
+    <b>Tên:</b> ${file.name}<br>
+    <b>Loại:</b> ${file.type || "Không xác định"}<br>
+    <b>Dung lượng:</b> ${size} KB
+    `;
 
 }
 
-
-
-
+}
 
 // =================================
-// Tìm kiếm nội dung tài liệu
-// (phiên bản thử nghiệm)
+// Tìm kiếm trong tài liệu hiện tại
 // =================================
+function searchDocument(keyword) {
 
-
-function searchDocument(keyword){
-
-
-    const content =
+const content =
     document.getElementById(
-    "documentContent"
+        "documentContent"
     ).innerText;
 
-
-
-    const result =
+const result =
     document.getElementById(
-    "searchResult"
+        "searchResult"
     );
 
+if (!content || content.length < 5) {
 
-
-    if(
-        !content ||
-        content.length < 5
-    ){
-
-        result.innerHTML =
+    result.innerHTML =
         "Chưa có nội dung để tra cứu";
 
+    return;
 
-        return;
+}
 
-    }
-
-
-
-
-    const text =
+const text =
     content.toLowerCase();
 
-
-
-    const key =
+const key =
     keyword.toLowerCase();
 
-
-
-
-    let index =
+let index =
     text.indexOf(key);
 
+if (index === -1) {
 
-
-    if(index === -1){
-
-
-        result.innerHTML =
+    result.innerHTML =
 
         `
-        Không tìm thấy:
-        <b>${keyword}</b>
-        `;
+    Không tìm thấy:
+    <b>${keyword}</b>
+    `;
 
+    return;
 
-        return;
+}
 
-    }
-
-
-
-
-    // Lấy đoạn văn xung quanh từ khóa
-
-
-    let start =
+// Lấy đoạn văn xung quanh từ khóa
+let start =
     Math.max(
         0,
         index - 200
     );
 
-
-    let end =
+let end =
     Math.min(
         content.length,
         index + 300
     );
 
-
-
-    let resultText =
+let resultText =
     content.substring(
         start,
         end
     );
 
-
-
-    result.innerHTML =
+result.innerHTML =
 
     `
-    <h4>
-    Kết quả tìm thấy:
-    </h4>
+<h4>
+Kết quả tìm thấy:
+</h4>
 
-    <p>
-    ${resultText}
-    </p>
-    `;
-
-
+<p>
+${resultText}
+</p>
+`;
 
 }
