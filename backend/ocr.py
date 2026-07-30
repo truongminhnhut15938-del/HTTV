@@ -1,55 +1,44 @@
 import fitz  # PyMuPDF
 import numpy as np
-from PIL import Image
+import cv2
 from paddleocr import PaddleOCR
 
-Khởi tạo OCR một lần duy nhất
+# Khởi tạo OCR một lần duy nhất
+ocr = PaddleOCR(use_angle_cls=True, lang='vi')
 
-ocr = PaddleOCR(
-use_angle_cls=True,
-lang='vi',
-show_log=False
-)
+def ocr_pdf(file_stream):
+    """
+    Hàm nhận vào dữ liệu file PDF dạng bytes,
+    chuyển từng trang PDF thành hình ảnh và trích xuất chữ bằng OCR.
+    """
+    doc = fitz.open(stream=file_stream, filetype='pdf')
+    full_text = []
 
-def ocr_pdf(pdf_bytes):
+    for page_index in range(len(doc)):
+        page = doc[page_index]
+        
+        # Render trang PDF thành hình ảnh
+        pix = page.get_pixmap(dpi=150)
+        
+        # Chuyển đổi pixmap sang mảng Numpy cho PaddleOCR
+        img = np.frombuffer(pix.samples, dtype=np.uint8).reshape((pix.height, pix.width, pix.n))
+        
+        # Chuyển đổi không gian màu phù hợp
+        if pix.n == 4:  # RGBA
+            img = cv2.cvtColor(img, cv2.COLOR_RGBA2BGR)
+        elif pix.n == 3:  # RGB
+            img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 
-doc = fitz.open(stream=pdf_bytes, filetype='pdf')
+        # Trích xuất chữ từ ảnh
+        result = ocr.ocr(img, cls=True)
+        
+        page_lines = []
+        if result and result[0]:
+            for line in result[0]:
+                text = line[1][0]
+                page_lines.append(text)
+        
+        full_text.append(f"--- TRANG {page_index + 1} ---\n" + "\n".join(page_lines))
 
-pages = []
-
-for page_index in range(len(doc)):
-
-    page = doc.load_page(page_index)
-
-    # Render 300 DPI
-    pix = page.get_pixmap(dpi=300)
-
-    img = Image.frombytes(
-        'RGB',
-        [pix.width, pix.height],
-        pix.samples
-    )
-
-    img_np = np.array(img)
-
-    result = ocr.ocr(img_np, cls=True)
-
-    lines = []
-
-    if result and result[0]:
-
-        for item in result[0]:
-
-            if item and len(item) >= 2:
-
-                text = item[1][0]
-
-                lines.append(text)
-
-    page_text = '\\n'.join(lines).strip()
-
-    pages.append(
-        f'===== Trang {page_index + 1} =====\\n{page_text}'
-    )
-
-return '\\n\\n'.join(pages)
+    doc.close()
+    return "\n\n".join(full_text)
