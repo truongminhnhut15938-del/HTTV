@@ -12,12 +12,16 @@ def health():
 @app.route('/ocr', methods=['POST'])
 def ocr_endpoint():
     if 'file' not in request.files:
-        return jsonify({'success': False, 'error': 'Không có file'}), 400
+        return jsonify({'success': False, 'error': 'Không có file trong request'}), 400
 
     file = request.files['file']
+    if file.filename == '':
+        return jsonify({'success': False, 'error': 'Chưa chọn file'}), 400
 
     try:
-        text = ocr_pdf(file.read())
+        # Đọc dữ liệu dạng bytes từ file gửi lên
+        file_bytes = file.read()
+        text = ocr_pdf(file_bytes)
 
         return jsonify({
             'success': True,
