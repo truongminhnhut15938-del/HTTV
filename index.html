@@ -1,162 +1,334 @@
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTTV - Hệ Thống Tri Thức Văn Bản</title>
 
-<title>HTTV - Hệ Thống Tri Thức Văn Bản</title>
+    <!-- PDF.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.5.136/pdf.min.js"></script>
 
-<link rel="stylesheet" href="frontend/css/style.css">
+    <!-- Mammoth (DOCX) -->
+    <script src="https://unpkg.com/mammoth/mammoth.browser.min.js"></script>
 
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f5f6fa;
+            color: #222;
+        }
+
+        header {
+            background: #0f62fe;
+            color: white;
+            padding: 16px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 22px;
+        }
+
+        header p {
+            margin: 6px 0 0;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .container {
+            padding: 16px;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        button {
+            background: #0f62fe;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 15px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #0353e9;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        }
+
+        .card h2 {
+            margin-top: 0;
+            font-size: 18px;
+        }
+
+        #documentList {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .doc-item {
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 12px;
+            cursor: pointer;
+            background: #fafafa;
+        }
+
+        .doc-item:hover {
+            background: #f0f4ff;
+            border-color: #0f62fe;
+        }
+
+        .doc-name {
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .doc-meta {
+            font-size: 13px;
+            color: #666;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+
+        .meta-row {
+            border-bottom: 1px solid #eee;
+            padding-bottom: 8px;
+        }
+
+        .meta-label {
+            font-size: 13px;
+            color: #777;
+            margin-bottom: 2px;
+        }
+
+        .meta-value {
+            font-weight: bold;
+        }
+
+        #documentContent {
+            white-space: pre-wrap;
+            line-height: 1.6;
+            font-size: 15px;
+            max-height: 420px;
+            overflow-y: auto;
+        }
+
+        #reader-status {
+            padding: 12px;
+            border-radius: 8px;
+            background: #eef4ff;
+            color: #0f62fe;
+            margin-bottom: 16px;
+            display: none;
+        }
+
+    </style>
 </head>
-
 
 <body>
 
-
 <header>
-
-<h1>📚 HTTV</h1>
-
-<p>Hệ Thống Tri Thức Văn Bản</p>
-
+    <h1>📚 HTTV - Hệ Thống Tri Thức Văn Bản</h1>
+    <p>Kho lưu trữ và phân tích PDF / DOCX</p>
 </header>
 
+<div class="container">
 
+    <div id="reader-status"></div>
 
-<main>
+    <div class="toolbar">
 
+        <button id="btnUpload">📂 Thêm tài liệu</button>
 
-<section class="search-box">
+        <input
+            type="file"
+            id="fileInput"
+            accept=".pdf,.docx"
+            hidden
+        />
 
-<input 
-id="searchInput"
-type="text"
-placeholder="Nhập từ khóa hoặc câu hỏi..."
->
+    </div>
 
+    <div class="card">
 
-<button id="btnSearch">
-🔍 Tra cứu
-</button>
+        <h2>📁 Danh sách tài liệu</h2>
 
+        <div id="documentList">
 
-</section>
+            Chưa có tài liệu nào.
 
+        </div>
 
+    </div>
 
-<section class="menu"><button id="btnUpload">
-📂 Thêm tài liệu
-</button><input
-id="fileInput"
-type="file"
-hidden
-accept=".pdf,.doc,.docx,.xls,.xlsx,.txt">
+    <div class="card">
 
-<button id="btnDocuments">
-📄 Danh sách tài liệu
-</button><button id="btnKnowledge">
-🧠 Kho tri thức
-</button><button id="btnSettings">
-⚙️ Cài đặt
-</button></section>
+        <h2>📄 Thông tin tài liệu</h2>
 
+        <div class="meta-grid">
 
+            <div class="meta-row">
+                <div class="meta-label">Loại văn bản</div>
+                <div class="meta-value" id="metaType">-</div>
+            </div>
 
-<section class="reader-box">
+            <div class="meta-row">
+                <div class="meta-label">Số hiệu</div>
+                <div class="meta-value" id="metaNumber">-</div>
+            </div>
 
+            <div class="meta-row">
+                <div class="meta-label">Cơ quan ban hành</div>
+                <div class="meta-value" id="metaAgency">-</div>
+            </div>
 
-<h3>
-📄 Nội dung tài liệu
-</h3>
+            <div class="meta-row">
+                <div class="meta-label">Ngày ban hành</div>
+                <div class="meta-value" id="metaIssueDate">-</div>
+            </div>
 
+            <div class="meta-row">
+                <div class="meta-label">Ngày hiệu lực</div>
+                <div class="meta-value" id="metaEffectiveDate">-</div>
+            </div>
 
-<div 
-id="documentContent"
-style="
-border:1px solid #ccc;
-padding:10px;
-height:350px;
-overflow:auto;
-background:#fff;
-"
->
+            <div class="meta-row">
+                <div class="meta-label">Trạng thái</div>
+                <div class="meta-value" id="metaStatus">-</div>
+            </div>
 
-Nội dung tài liệu sẽ hiển thị tại đây
+        </div>
+
+    </div>
+
+    <div class="card">
+
+        <h2>📝 Nội dung tài liệu</h2>
+
+        <div id="documentContent">
+
+            Chọn một tài liệu để xem nội dung.
+
+        </div>
+
+    </div>
 
 </div>
 
+<script>
 
-</section>
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.5.136/pdf.worker.min.js";
 
+</script>
 
+<script src="js/storage.js"></script>
+<script src="js/reader.js"></script>
 
-<section class="result-box">
+<script>
 
+    document.getElementById("btnUpload").addEventListener("click", () => {
+        document.getElementById("fileInput").click();
+    });
 
-<h3>
-🔎 Kết quả tra cứu
-</h3>
+    function showStatus(message) {
 
+        const box = document.getElementById("reader-status");
 
-<div id="searchResult">
+        box.style.display = "block";
 
-Chưa có kết quả
+        box.textContent = message;
 
-</div>
+    }
 
+    async function loadDocumentList() {
 
-</section>
+        const list = document.getElementById("documentList");
 
+        const docs = await getAllDocuments();
 
+        if (!docs.length) {
 
-</main>
+            list.innerHTML = "Chưa có tài liệu nào.";
 
+            return;
 
+        }
 
-<footer>
+        list.innerHTML = docs.map(doc => `
+            <div class="doc-item" onclick="openDocument('${doc.id}')">
+                <div class="doc-name">${doc.fileName}</div>
+                <div class="doc-meta">
+                    ${(doc.fileSize / 1024).toFixed(1)} KB
+                </div>
+            </div>
+        `).join("");
 
+    }
 
-<p>
-HTTV © 2026 - Hệ Thống Tri Thức Văn Bản
-</p>
+    async function openDocument(id) {
 
+        const doc = await getDocument(id);
 
-</footer>
+        if (!doc) return;
 
+        document.getElementById("metaType").textContent =
+            doc.type || "-";
 
+        document.getElementById("metaNumber").textContent =
+            doc.number || "-";
 
+        document.getElementById("metaAgency").textContent =
+            doc.agency || "-";
 
+        document.getElementById("metaIssueDate").textContent =
+            doc.issueDate || "-";
 
-<!-- Thư viện đọc PDF -->
+        document.getElementById("metaEffectiveDate").textContent =
+            doc.effectiveDate || "-";
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+        document.getElementById("metaStatus").textContent =
+            doc.status || "-";
 
+        document.getElementById("documentContent").textContent =
+            doc.rawText || "(Không có nội dung)";
 
+    }
 
-<!-- Thư viện đọc DOCX -->
+    window.addEventListener("load", async () => {
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+        await initDB();
 
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+        await loadDocumentList();
 
-<!-- Các module HTTV -->
+    });
 
-
-<script src="frontend/js/config.js"></script>
-  
-<script src="frontend/js/database.js"></script>
-
-<script src="frontend/js/reader.js"></script>
-
-<script src="frontend/js/ui.js"></script>
-
-<script src="frontend/js/app.js"></script>
-
-
+</script>
 
 </body>
-
 </html>
