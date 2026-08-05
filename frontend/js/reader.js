@@ -1,225 +1,182 @@
 // ======================================
-// HTTV - READER.JS (Hybrid PDF.js + Render OCR)
-// Backend OCR: https://httv-ocr-backend.onrender.com
+// HTTV - READER.JS
+// Đọc PDF (text) và DOCX rồi lưu vào storage.js
 // ======================================
 
-console.log('HTTV Hybrid Reader');
+// Yêu cầu:
+// - storage.js đã được load trước
+// - pdf.js và mammoth đã được import trong index.html
 
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+const Reader = {
 
-const OCR_BACKEND = 'https://httv-ocr-backend.onrender.com';
+    // ==============================
+    // Đọc một file bất kỳ
+    // ==============================
+    async readFile(file) {
 
-async function parseTXT(file) {
-return await file.text();
-}
+        if (!file) throw new Error("Không có file");
 
-async function parseDOCX(file) {
-const arrayBuffer = await file.arrayBuffer();
-const result = await mammoth.extractRawText({ arrayBuffer });
-return result.value;
-}
+        const ext = file.name.toLowerCase();
 
-// ======================================
-// PDF.js trước
-// ======================================
-async function parsePDF(file) {
+        let text = "";
 
-const pdf = await pdfjsLib.getDocument({
-data: await file.arrayBuffer()
-}).promise;
+        if (ext.endsWith(".pdf")) {
 
-let text = '';
+            text = await this.readPDF(file);
 
-for (let i = 1; i <= pdf.numPages; i++) {
+        } else if (ext.endsWith(".docx")) {
 
-const page = await pdf.getPage(i);
-const content = await page.getTextContent();
+            text = await this.readDOCX(file);
 
-text += content.items
-.map(item => item.str)
-.join(' ') + '\n';
+        } else {
 
-}
+            throw new Error("Chỉ hỗ trợ PDF và DOCX");
 
-text = cleanText(text);
+        }
 
-// Nếu văn bản có dấu hiệu lỗi font → OCR
-if (isCorruptedText(text)) {
-console.log('HTTV: PDF lỗi font, chuyển sang OCR...');
-text = await parsePDFByOCR(file);
-}
+        const document = await saveDocument({
 
-return text;
+            fileName: file.name,
 
-}
+            fileType: file.type,
 
-// ======================================
-// Gửi PDF lên Render OCR
-// ======================================
-async function parsePDFByOCR(file) {
+            fileSize: file.size,
 
-const formData = new FormData();
-formData.append('file', file);
+            fileBlob: file,
 
-const response = await fetch(
-OCR_BACKEND + '/ocr',
-{
-method: 'POST',
-body: formData
-}
-);
+            rawText: text
 
-if (!response.ok) {
-throw new Error('OCR backend không phản hồi');
-}
+        });
 
-const data = await response.json();
+        return document;
 
-if (!data.success) {
-throw new Error(data.error || 'OCR thất bại');
-}
+    },
 
-return cleanText(data.text);
+    // ==============================
+    // Đọc PDF dạng text bằng PDF.js
+    // ==============================
+    async readPDF(file) {
 
-}
+        const arrayBuffer = await file.arrayBuffer();
 
-// ======================================
-// Phát hiện văn bản lỗi
-// ======================================
-function isCorruptedText(text) {
+        const pdf = await pdfjsLib.getDocument({
+            data: arrayBuffer
+        }).promise;
 
-if (!text) return true;
+        let fullText = "";
 
-const sample = text.slice(0, 3000);
+        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
 
-const badPatterns = [
-'Ã',
-'Æ',
-'Ð',
-'�',
-'¤',
-'¢',
-'§'
-];
+            const page = await pdf.getPage(pageNum);
 
-let score = 0;
+            const content = await page.getTextContent();
 
-for (const p of badPatterns) {
-score += (sample.split(p).length - 1);
-}
+            const pageText = content.items
+                .map(item => item.str)
+                .join(" ");
 
-const letters = (sample.match(/[A-Za-zÀ-ỹ]/g) || []).length;
-const badRatio = letters === 0 ? 1 : score / letters;
+            fullText += pageText + "\n\n";
 
-// Nếu quá nhiều ký tự lạ hoặc quá ít dấu tiếng Việt
-const vietnamese =
-(sample.match(/[àáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵđ]/gi) || []).length;
+        }
 
-const viRatio = letters === 0 ? 0 : vietnamese / letters;
+        return fullText.trim();
 
-return badRatio > 0.01 || viRatio < 0.02;
+    },
 
-}
+    // ==============================
+    // Đọc DOCX bằng Mammoth
+    // ==============================
+    async readDOCX(file) {
 
-// ======================================
-// Chuẩn hóa văn bản
-// ======================================
-function cleanText(text) {
+        const arrayBuffer = await file.arrayBuffer();
 
-text = text.replace(/\r/g, '');
+        const result = await mammoth.extractRawText({
+            arrayBuffer
+        });
 
-text = text.replace(/[ \t]{2,}/g, ' ');
+        return (result.value || "").trim();
 
-text = text.replace(/\n{3,}/g, '\n\n');
-
-return text.trim();
-
-}
-
-// ======================================
-// Xử lý tài liệu
-// ======================================
-async function processDocument(file) {
-
-const name = file.name;
-
-let text = '';
-
-if (name.toLowerCase().endsWith('.txt')) {
-
-text = await parseTXT(file);
-
-} else if (name.toLowerCase().endsWith('.docx')) {
-
-text = await parseDOCX(file);
-
-} else if (name.toLowerCase().endsWith('.pdf')) {
-
-text = await parsePDF(file);
-
-} else {
-
-throw new Error('Định dạng chưa được hỗ trợ');
-
-}
-
-const documentData = {
-
-id: Date.now().toString(),
-
-name,
-
-title: name,
-
-type: name.toLowerCase().endsWith('.pdf')
-? 'pdf'
-: name.toLowerCase().endsWith('.docx')
-? 'docx'
-: 'txt',
-
-source: 'local',
-
-size: file.size,
-
-content: text,
-
-createdAt: Date.now()
+    }
 
 };
 
-if (typeof saveDocument === 'function') {
-await saveDocument(documentData);
-}
+// ======================================
+// Hàm xử lý khi người dùng chọn file
+// ======================================
+async function handleFileSelected(event) {
 
-return documentData;
+    const file = event.target.files[0];
+
+    if (!file) return;
+
+    try {
+
+        showStatus("Đang đọc tài liệu...");
+
+        const doc = await Reader.readFile(file);
+
+        showStatus("Đã lưu: " + doc.fileName);
+
+        if (typeof loadDocumentList === "function") {
+            loadDocumentList();
+        }
+
+        console.log("Đã lưu tài liệu:", doc);
+
+    } catch (e) {
+
+        console.error(e);
+
+        showStatus("Lỗi: " + e.message);
+
+    } finally {
+
+        event.target.value = "";
+
+    }
 
 }
 
 // ======================================
-// Hiển thị tài liệu
+// Hiển thị trạng thái
 // ======================================
-async function readDocument(file) {
+function showStatus(message) {
 
-const output = document.getElementById('documentContent');
+    let el = document.getElementById("reader-status");
 
-if (!output) {
-alert('Chưa có vùng hiển thị nội dung');
-return;
+    if (!el) {
+
+        el = document.createElement("div");
+
+        el.id = "reader-status";
+
+        el.style.padding = "10px";
+
+        el.style.margin = "10px 0";
+
+        el.style.borderRadius = "8px";
+
+        el.style.background = "#f5f5f5";
+
+        document.body.appendChild(el);
+
+    }
+
+    el.textContent = message;
+
 }
 
-output.innerHTML = 'Đang đọc tài liệu...';
+// ======================================
+// Gắn sự kiện
+// ======================================
+window.addEventListener("DOMContentLoaded", () => {
 
-try {
+    const fileInput = document.getElementById("fileInput");
 
-const documentData = await processDocument(file);
+    if (fileInput) {
 
-output.innerText = documentData.content;
+        fileInput.addEventListener("change", handleFileSelected);
 
-} catch (err) {
+    }
 
-output.innerText = 'Lỗi: ' + err.message;
-
-}
-
-}
+});
