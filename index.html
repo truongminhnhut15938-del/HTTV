@@ -3,17 +3,9 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
     <title>HTTV - Hệ Thống Tri Thức Văn Bản</title>
 
-    <!-- PDF.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.5.136/pdf.min.js"></script>
-
-    <!-- Mammoth (DOCX) -->
-    <script src="https://unpkg.com/mammoth/mammoth.browser.min.js"></script>
-
     <style>
-
         * {
             box-sizing: border-box;
         }
@@ -146,7 +138,6 @@
             margin-bottom: 16px;
             display: none;
         }
-
     </style>
 </head>
 
@@ -154,7 +145,7 @@
 
 <header>
     <h1>📚 HTTV - Hệ Thống Tri Thức Văn Bản</h1>
-    <p>Kho lưu trữ và phân tích PDF / DOCX</p>
+    <p>Kho lưu trữ và phân tích PDF / DOCX (Offline)</p>
 </header>
 
 <div class="container">
@@ -162,7 +153,6 @@
     <div id="reader-status"></div>
 
     <div class="toolbar">
-
         <button id="btnUpload">📂 Thêm tài liệu</button>
 
         <input
@@ -171,23 +161,17 @@
             accept=".pdf,.docx"
             hidden
         />
-
     </div>
 
     <div class="card">
-
         <h2>📁 Danh sách tài liệu</h2>
 
         <div id="documentList">
-
             Chưa có tài liệu nào.
-
         </div>
-
     </div>
 
     <div class="card">
-
         <h2>📄 Thông tin tài liệu</h2>
 
         <div class="meta-grid">
@@ -223,49 +207,98 @@
             </div>
 
         </div>
-
     </div>
 
     <div class="card">
-
         <h2>📝 Nội dung tài liệu</h2>
 
         <div id="documentContent">
-
             Chọn một tài liệu để xem nội dung.
-
         </div>
-
     </div>
 
 </div>
 
+<!-- ===========================
+     THƯ VIỆN CỤC BỘ (OFFLINE)
+=========================== -->
+
+<!-- PDF.js -->
+<script src="lib/pdf.min.js"></script>
 <script>
-
-    pdfjsLib.GlobalWorkerOptions.workerSrc =
-        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.5.136/pdf.worker.min.js";
-
+pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
 </script>
 
-<script src="js/storage.js"></script>
-<script src="js/reader.js"></script>
+<!-- Mammoth đọc DOCX -->
+<script src="lib/mammoth.browser.min.js"></script>
+
+<!-- ===========================
+     MODULE HTTV
+=========================== -->
+
+<script src="js/db.js"></script>
+<script src="js/parser.js"></script>
 
 <script>
+    // ===========================
+    // HIỂN THỊ TRẠNG THÁI
+    // ===========================
+    function showStatus(message) {
+        const box = document.getElementById("reader-status");
+        box.style.display = "block";
+        box.textContent = message;
+    }
 
+    function hideStatus() {
+        document.getElementById("reader-status").style.display = "none";
+    }
+
+    // ===========================
+    // THÊM TÀI LIỆU
+    // ===========================
     document.getElementById("btnUpload").addEventListener("click", () => {
         document.getElementById("fileInput").click();
     });
 
-    function showStatus(message) {
+    document.getElementById("fileInput").addEventListener("change", async (e) => {
 
-        const box = document.getElementById("reader-status");
+        const file = e.target.files[0];
+        if (!file) return;
 
-        box.style.display = "block";
+        try {
 
-        box.textContent = message;
+            showStatus("Đang đọc tài liệu...");
 
-    }
+            const text = await readDocument(file);
 
+            const doc = await saveDocument({
+                title: file.name,
+                fileName: file.name,
+                fileType: file.type,
+                rawText: text
+            });
+
+            showStatus("Đã lưu: " + doc.fileName);
+
+            await loadDocumentList();
+
+        } catch (err) {
+
+            console.error(err);
+
+            showStatus("Lỗi: " + err.message);
+
+        } finally {
+
+            e.target.value = "";
+
+        }
+
+    });
+
+    // ===========================
+    // DANH SÁCH TÀI LIỆU
+    // ===========================
     async function loadDocumentList() {
 
         const list = document.getElementById("documentList");
@@ -281,48 +314,58 @@
         }
 
         list.innerHTML = docs.map(doc => `
-            <div class="doc-item" onclick="openDocument('${doc.id}')">
+            <div class="doc-item" data-id="${doc.id}">
                 <div class="doc-name">${doc.fileName}</div>
                 <div class="doc-meta">
-                    ${(doc.fileSize / 1024).toFixed(1)} KB
+                    ${new Date(doc.createdAt).toLocaleString("vi-VN")}
                 </div>
             </div>
         `).join("");
 
+        list.querySelectorAll(".doc-item").forEach(item => {
+            item.addEventListener("click", () => openDocument(item.dataset.id));
+        });
+
     }
 
+    // ===========================
+    // MỞ TÀI LIỆU
+    // ===========================
     async function openDocument(id) {
 
-        const doc = await getDocument(id);
+        const doc = await getDocumentById(id);
 
         if (!doc) return;
 
         document.getElementById("metaType").textContent =
-            doc.type || "-";
+            doc.metadata.docType || "-";
 
         document.getElementById("metaNumber").textContent =
-            doc.number || "-";
+            doc.metadata.number || "-";
 
         document.getElementById("metaAgency").textContent =
-            doc.agency || "-";
+            doc.metadata.agency || "-";
 
         document.getElementById("metaIssueDate").textContent =
-            doc.issueDate || "-";
+            doc.metadata.issuedDate || "-";
 
         document.getElementById("metaEffectiveDate").textContent =
-            doc.effectiveDate || "-";
+            doc.metadata.effectiveDate || "-";
 
         document.getElementById("metaStatus").textContent =
-            doc.status || "-";
+            doc.metadata.status || "-";
 
         document.getElementById("documentContent").textContent =
             doc.rawText || "(Không có nội dung)";
 
     }
 
+    // ===========================
+    // KHỞI ĐỘNG HTTV
+    // ===========================
     window.addEventListener("load", async () => {
 
-        await initDB();
+        await initDatabase();
 
         await loadDocumentList();
 
