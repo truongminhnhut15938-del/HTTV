@@ -3,293 +3,132 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <title>HTTV - Hệ Thống Tri Thức Văn Bản</title>
 
-  <style>
-    :root{
-      --blue:#1976d2;
-      --blue-dark:#1565c0;
-      --bg:#f3f6fb;
-      --card:#ffffff;
-      --border:#e2e8f0;
-      --text:#1f2937;
-      --muted:#64748b;
-      --shadow:0 8px 24px rgba(15,23,42,.08);
-      --radius:16px;
-    }
-
-    *{box-sizing:border-box}
-
-    body{
-      margin:0;
-      font-family:Arial, Helvetica, sans-serif;
-      background:var(--bg);
-      color:var(--text);
-    }
-
-    header{
-      background:var(--blue);
-      color:#fff;
-      padding:18px 20px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      box-shadow:0 2px 8px rgba(0,0,0,.15);
-      flex-wrap:wrap;
-      gap:12px;
-    }
-
-    header h1{
-      margin:0;
-      font-size:24px;
-      font-weight:700;
-    }
-
-    .toolbar{
-      display:flex;
-      gap:10px;
-      align-items:center;
-      flex-wrap:wrap;
-    }
-
-    .btn{
-      background:#fff;
-      color:var(--blue);
-      border:none;
-      padding:10px 14px;
-      border-radius:10px;
-      font-weight:700;
-      cursor:pointer;
-    }
-
-    .btn.primary{
-      background:var(--blue-dark);
-      color:#fff;
-    }
-
-    .btn:disabled{
-      opacity:.7;
-      cursor:not-allowed;
-    }
-
-    .search{
-      display:flex;
-      align-items:center;
-      gap:8px;
-      background:#fff;
-      padding:8px 10px;
-      border-radius:10px;
-      min-width:260px;
-    }
-
-    .search input{
-      border:none;
-      outline:none;
-      width:100%;
-      font-size:14px;
-    }
-
-    .container{
-      display:grid;
-      grid-template-columns:320px 1fr;
-      gap:18px;
-      padding:18px;
-    }
-
-    .panel{
-      background:var(--card);
-      border:1px solid var(--border);
-      border-radius:var(--radius);
-      box-shadow:var(--shadow);
-      overflow:hidden;
-    }
-
-    .panel-header{
-      padding:14px 16px;
-      border-bottom:1px solid var(--border);
-      font-weight:700;
-      background:#fff;
-    }
-
-    .panel-body{
-      padding:14px 16px;
-    }
-
-    #libraryList{
-      display:flex;
-      flex-direction:column;
-      gap:12px;
-    }
-
-    .doc-item{
-      border:1px solid var(--border);
-      border-radius:12px;
-      padding:12px;
-      cursor:pointer;
-      transition:.15s;
-      background:#fff;
-    }
-
-    .doc-item:hover{
-      border-color:var(--blue);
-      transform:translateY(-1px);
-    }
-
-    .doc-item.active{
-      border-color:var(--blue);
-      box-shadow:0 0 0 3px rgba(25,118,210,.12);
-    }
-
-    .doc-item h3{
-      margin:0 0 8px 0;
-      font-size:16px;
-      color:var(--blue);
-    }
-
-    .meta{
-      font-size:13px;
-      color:var(--muted);
-      line-height:1.5;
-    }
-
-    .empty{
-      text-align:center;
-      color:var(--muted);
-      padding:28px 10px;
-      border:1px dashed var(--border);
-      border-radius:12px;
-    }
-
-    .detail{
-      display:flex;
-      flex-direction:column;
-      gap:16px;
-    }
-
-    .detail-card{
-      border:1px solid var(--border);
-      border-radius:12px;
-      padding:14px;
-      background:#fff;
-    }
-
-    .detail-card h2{
-      margin:0 0 10px 0;
-      color:var(--blue);
-      font-size:22px;
-    }
-
-    .detail-grid{
-      display:grid;
-      grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-      gap:10px;
-    }
-
-    .detail-grid div{
-      padding:10px;
-      border:1px solid var(--border);
-      border-radius:10px;
-      background:#fafafa;
-      font-size:14px;
-    }
-
-    .clause{
-      border:1px solid var(--border);
-      border-radius:12px;
-      padding:14px;
-      margin-bottom:12px;
-      background:#fff;
-    }
-
-    .clause h3{
-      margin:0 0 10px 0;
-      color:var(--blue);
-      font-size:18px;
-    }
-
-    .clause p{
-      margin:0;
-      line-height:1.7;
-      white-space:pre-wrap;
-      text-align:justify;
-    }
-
-    @media (max-width:900px){
-      .container{
-        grid-template-columns:1fr;
-      }
-
-      .search{
-        min-width:unset;
-        width:100%;
-      }
-
-      .toolbar{
-        width:100%;
-      }
-    }
-  </style>
+  <link rel="stylesheet" href="frontend/css/style.css" />
 </head>
+
 <body>
 
-<header>
-  <h1>📚 HTTV - Hệ Thống Tri Thức Văn Bản</h1>
+  <div class="app">
 
-  <div class="toolbar">
-    <div class="search">
-      🔎
-      <input id="searchInput" type="text" placeholder="Tra cứu từ khóa hoặc điều khoản...">
-    </div>
+    <!-- ===========================
+         HEADER
+    ============================ -->
 
-    <button id="btnUpload" class="btn primary">➕ Thêm tài liệu</button>
-    <input id="fileInput" type="file" accept=".pdf,.docx" style="display:none">
+    <header class="header">
+      <div class="logo">📚</div>
+
+      <div class="title-group">
+        <h1>HTTV</h1>
+        <p>Hệ Thống Tri Thức Văn Bản</p>
+      </div>
+    </header>
+
+    <!-- ===========================
+         SEARCH
+    ============================ -->
+
+    <section class="search-section">
+      <input
+        id="searchInput"
+        type="text"
+        placeholder="Tra cứu theo số văn bản, điều khoản hoặc từ khóa..."
+      />
+    </section>
+
+    <!-- ===========================
+         ACTION BAR
+    ============================ -->
+
+    <section class="action-bar">
+
+      <button id="btnUpload" class="btn primary">
+        ➕ Thêm tài liệu
+      </button>
+
+      <input
+        id="fileInput"
+        type="file"
+        accept=".pdf,.docx"
+        style="display:none"
+      />
+
+    </section>
+
+    <!-- ===========================
+         MAIN LAYOUT
+    ============================ -->
+
+    <main class="main-layout">
+
+      <!-- KHO TÀI LIỆU -->
+      <aside class="library-panel">
+
+        <div class="panel-title">
+          📂 Kho tài liệu
+        </div>
+
+        <div id="libraryList" class="library-list">
+          <p class="empty">Chưa có tài liệu nào.</p>
+        </div>
+
+      </aside>
+
+      <!-- CHI TIẾT TÀI LIỆU -->
+      <section class="detail-panel">
+
+        <div class="panel-title">
+          📄 Chi tiết tài liệu
+        </div>
+
+        <div id="detailView" class="detail-view">
+
+          <div class="detail-card">
+
+            <h2>Chưa chọn tài liệu</h2>
+
+            <p>
+              Hãy nhấn <b>➕ Thêm tài liệu</b> để nhập một file
+              PDF hoặc DOCX.
+            </p>
+
+            <p>
+              HTTV sẽ tự động phân tích:
+            </p>
+
+            <ul>
+              <li>Số văn bản</li>
+              <li>Ngày ban hành</li>
+              <li>Ngày hiệu lực</li>
+              <li>Các Điều khoản</li>
+            </ul>
+
+          </div>
+
+        </div>
+
+      </section>
+
+    </main>
+
   </div>
-</header>
 
-<div class="container">
+  <!-- ===========================
+       LIBRARIES
+  ============================ -->
 
-  <aside class="panel">
-    <div class="panel-header">Kho tài liệu</div>
-    <div class="panel-body">
-      <div id="libraryList">
-        <p class="empty">Chưa có tài liệu nào.</p>
-      </div>
-    </div>
-  </aside>
+  <script src="lib/pdf.min.js"></script>
+  <script src="lib/mammoth.browser.min.js"></script>
 
-  <main class="panel">
-    <div class="panel-header">Nội dung tài liệu</div>
+  <!-- ===========================
+       HTTV MODULES
+  ============================ -->
 
-    <div class="panel-body detail" id="detailView">
-
-      <div class="detail-card">
-        <h2>Chào mừng đến với HTTV</h2>
-
-        <p>
-          Hệ thống lưu trữ và phân tích văn bản pháp luật hoạt động hoàn toàn trên trình duyệt.
-          Bạn có thể thêm <strong>PDF</strong> hoặc <strong>DOCX</strong>, HTTV sẽ:
-        </p>
-
-        <ul>
-          <li>Lưu tài liệu cục bộ trên thiết bị.</li>
-          <li>Trích văn bản từ PDF/DOCX.</li>
-          <li>Tự động nhận diện số văn bản, ngày ban hành, ngày hiệu lực (nếu có).</li>
-          <li>Chia tài liệu thành từng <strong>Điều</strong> để tra cứu.</li>
-        </ul>
-
-        <p>Nhấn <strong>Thêm tài liệu</strong> để bắt đầu.</p>
-      </div>
-
-    </div>
-  </main>
-
-</div>
-
-<script src="lib/pdf.min.js"></script>
-<script src="lib/mammoth.browser.min.js"></script>
-<script src="js/parser.js"></script>
-<script src="js/storage.js"></script>
-<script src="js/app.js"></script>
+  <script src="frontend/js/parser.js"></script>
+  <script src="frontend/js/storage.js"></script>
+  <script src="frontend/js/app.js"></script>
 
 </body>
 </html>
