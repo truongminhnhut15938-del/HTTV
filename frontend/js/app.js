@@ -4,20 +4,32 @@
 (function () {
   "use strict";
 
+  // ===========================
+  // DOM
+  // ===========================
   const btnUpload = document.getElementById("btnUpload");
   const fileInput = document.getElementById("fileInput");
   const libraryList = document.getElementById("libraryList");
   const detailView = document.getElementById("detailView");
   const searchInput = document.getElementById("searchInput");
 
+  // ===========================
+  // Khởi động
+  // ===========================
   document.addEventListener("DOMContentLoaded", () => {
     renderLibrary();
   });
 
+  // ===========================
+  // Mở hộp thoại chọn file
+  // ===========================
   btnUpload.addEventListener("click", () => {
     fileInput.click();
   });
 
+  // ===========================
+  // Thêm tài liệu
+  // ===========================
   fileInput.addEventListener("change", async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -26,12 +38,13 @@
       btnUpload.disabled = true;
       btnUpload.textContent = "Đang phân tích...";
 
-      // Chờ parser xuất hiện tối đa 3 giây
-      await waitForParser();
-
+      // Gọi trực tiếp parser
       const doc = await window.parseDocument(file);
 
+      // Lưu tài liệu
       addDocument(doc);
+
+      // Cập nhật giao diện
       renderLibrary();
       showDetail(doc);
 
@@ -48,25 +61,9 @@
     }
   });
 
-  function waitForParser(timeout = 3000) {
-    return new Promise((resolve, reject) => {
-      const start = Date.now();
-
-      const timer = setInterval(() => {
-        if (typeof window.parseDocument === "function") {
-          clearInterval(timer);
-          resolve();
-          return;
-        }
-
-        if (Date.now() - start > timeout) {
-          clearInterval(timer);
-          reject(new Error("parser.js chưa được nạp"));
-        }
-      }, 50);
-    });
-  }
-
+  // ===========================
+  // Render danh sách tài liệu
+  // ===========================
   function renderLibrary(keyword = "") {
     const docs = loadDocuments();
 
@@ -75,11 +72,13 @@
     if (keyword) {
       const q = keyword.toLowerCase();
 
-      filtered = docs.filter(doc =>
-        doc.name.toLowerCase().includes(q) ||
-        (doc.metadata.documentNumber || "").toLowerCase().includes(q) ||
-        (doc.metadata.documentType || "").toLowerCase().includes(q)
-      );
+      filtered = docs.filter(doc => {
+        return (
+          doc.name.toLowerCase().includes(q) ||
+          (doc.metadata.documentNumber || "").toLowerCase().includes(q) ||
+          (doc.metadata.documentType || "").toLowerCase().includes(q)
+        );
+      });
     }
 
     if (!filtered.length) {
@@ -97,41 +96,81 @@
       </div>
     `).join("");
 
+    // Gắn sự kiện click
     document.querySelectorAll(".doc-item").forEach(item => {
       item.addEventListener("click", () => {
+        const id = item.dataset.id;
         const docs = loadDocuments();
-        const doc = docs.find(d => d.id === item.dataset.id);
+        const doc = docs.find(d => d.id === id);
+
         if (doc) showDetail(doc);
       });
     });
   }
 
+  // ===========================
+  // Hiển thị chi tiết
+  // ===========================
   function showDetail(doc) {
     detailView.innerHTML = `
       <div class="detail-card">
+
         <h2>${doc.name}</h2>
 
-        <p><b>Loại văn bản:</b> ${doc.metadata.documentType || "Chưa xác định"}</p>
-        <p><b>Số hiệu:</b> ${doc.metadata.documentNumber || "Chưa xác định"}</p>
-        <p><b>Cơ quan ban hành:</b> ${doc.metadata.issuingAgency || "Chưa xác định"}</p>
-        <p><b>Ngày ban hành:</b> ${doc.metadata.issuedDate || "Chưa xác định"}</p>
-        <p><b>Ngày hiệu lực:</b> ${doc.metadata.effectiveDate || "Chưa xác định"}</p>
-        <p><b>Số điều khoản:</b> ${doc.clauses.length}</p>
+        <div class="meta-grid">
+
+          <div class="meta-item">
+            <div class="label">Loại văn bản</div>
+            <div class="value">${doc.metadata.documentType || "Chưa xác định"}</div>
+          </div>
+
+          <div class="meta-item">
+            <div class="label">Số hiệu</div>
+            <div class="value">${doc.metadata.documentNumber || "Chưa xác định"}</div>
+          </div>
+
+          <div class="meta-item">
+            <div class="label">Cơ quan ban hành</div>
+            <div class="value">${doc.metadata.issuingAgency || "Chưa xác định"}</div>
+          </div>
+
+          <div class="meta-item">
+            <div class="label">Ngày ban hành</div>
+            <div class="value">${doc.metadata.issuedDate || "Chưa xác định"}</div>
+          </div>
+
+          <div class="meta-item">
+            <div class="label">Ngày hiệu lực</div>
+            <div class="value">${doc.metadata.effectiveDate || "Chưa xác định"}</div>
+          </div>
+
+          <div class="meta-item">
+            <div class="label">Số điều khoản</div>
+            <div class="value">${doc.clauses.length}</div>
+          </div>
+
+        </div>
 
         <h3 style="margin-top:18px">Điều khoản</h3>
 
-        ${doc.clauses.length
-          ? doc.clauses.map(c => `
+        <div class="clause-list">
+          ${doc.clauses.length
+            ? doc.clauses.map(c => `
               <div class="clause">
                 <h4>${c.title}</h4>
-                <p>${c.content}</p>
+                <p>${c.content || ""}</p>
               </div>
             `).join("")
-          : '<p class="empty">Không tìm thấy điều khoản.</p>'}
+            : '<p class="empty">Không tìm thấy điều khoản.</p>'}
+        </div>
+
       </div>
     `;
   }
 
+  // ===========================
+  // Tìm kiếm
+  // ===========================
   searchInput.addEventListener("input", () => {
     renderLibrary(searchInput.value);
   });
