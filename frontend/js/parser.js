@@ -180,3 +180,213 @@ console.log("HTTV Parser v3 loaded");
   }
 
   // ===== PHẦN B SẼ ĐƯỢC NỐI TIẾP NGAY SAU ĐÂY =====
+// ===========================
+// Trích metadata theo từng dòng
+// ===========================
+function extractMetadataFromLines(lines) {
+
+  const metadata = {
+    documentType: "",
+    documentNumber: "",
+    issuingAgency: "",
+    issuedDate: "",
+    effectiveDate: ""
+  };
+
+  // -----------------------
+  // 1. Cơ quan ban hành
+  // -----------------------
+  for (const line of lines.slice(0, 12)) {
+
+    if (
+      /NGÂN HÀNG NHÀ NƯỚC/i.test(line) ||
+      /^BỘ /i.test(line) ||
+      /CHÍNH PHỦ/i.test(line) ||
+      /QUỐC HỘI/i.test(line) ||
+      /THỦ TƯỚNG CHÍNH PHỦ/i.test(line) ||
+      /ỦY BAN NHÂN DÂN/i.test(line) ||
+      /^UBND /i.test(line)
+    ) {
+      metadata.issuingAgency = line.trim();
+      break;
+    }
+  }
+
+  // -----------------------
+  // 2. Loại văn bản
+  // -----------------------
+  for (const line of lines.slice(0, 20)) {
+
+    const m = line.match(
+      /^(THÔNG TƯ|NGHỊ ĐỊNH|QUYẾT ĐỊNH|CÔNG VĂN|THÔNG BÁO|CHỈ THỊ|LUẬT|NGHỊ QUYẾT)$/i
+    );
+
+    if (m) {
+      metadata.documentType = m[1].toUpperCase();
+      break;
+    }
+  }
+
+  // -----------------------
+  // 3. Số hiệu văn bản
+  // -----------------------
+  for (const line of lines.slice(0, 30)) {
+
+    const m = line.match(
+      /Số:\s*([0-9]{1,4}\/[0-9]{4}\/[A-ZÀ-Ỹ0-9-]+(?:-[A-ZÀ-Ỹ0-9]+)*)/i
+    );
+
+    if (m) {
+      metadata.documentNumber = m[1].trim();
+      break;
+    }
+  }
+
+  // -----------------------
+  // 4. Ngày ban hành
+  // -----------------------
+  for (const line of lines.slice(0, 40)) {
+
+    let m = line.match(
+      /ngày\s+(\d{1,2})\s+tháng\s+(\d{1,2})\s+năm\s+(\d{4})/i
+    );
+
+    if (m) {
+      metadata.issuedDate =
+        `${m[1].padStart(2, "0")}/${m[2].padStart(2, "0")}/${m[3]}`;
+      break;
+    }
+
+    m = line.match(
+      /(\d{1,2})\/(\d{1,2})\/(\d{4})/
+    );
+
+    if (m) {
+      metadata.issuedDate =
+        `${m[1].padStart(2, "0")}/${m[2].padStart(2, "0")}/${m[3]}`;
+      break;
+    }
+  }
+
+  // -----------------------
+  // 5. Ngày hiệu lực
+  // -----------------------
+  for (const line of lines) {
+
+    const m = line.match(
+      /(có hiệu lực|hiệu lực từ ngày|có hiệu lực kể từ ngày).*?(\d{1,2})\s+tháng\s+(\d{1,2})\s+năm\s+(\d{4})/i
+    );
+
+    if (m) {
+      metadata.effectiveDate =
+        `${m[2].padStart(2, "0")}/${m[3].padStart(2, "0")}/${m[4]}`;
+      break;
+    }
+  }
+
+  return metadata;
+}
+
+// ===========================
+// Tách Điều / Khoản / Điểm
+// ===========================
+function extractClausesFromLines(lines) {
+
+  const clauses = [];
+
+  let currentClause = null;
+  let currentKhoan = null;
+
+  for (const rawLine of lines) {
+
+    const line = rawLine.trim();
+
+    if (!line) continue;
+
+    // -----------------------
+    // Điều
+    // -----------------------
+    let m = line.match(/^Điều\s+(\d+)(?:[.:])?\s*(.*)$/i);
+
+    if (m) {
+
+      if (currentClause) {
+        clauses.push(currentClause);
+      }
+
+      currentClause = {
+        number: m[1],
+        title: `Điều ${m[1]}${m[2] ? ". " + m[2] : ""}`,
+        content: "",
+        khoans: []
+      };
+
+      currentKhoan = null;
+
+      continue;
+    }
+
+    if (!currentClause) continue;
+
+    // -----------------------
+    // Khoản
+    // -----------------------
+    m = line.match(/^(\d+)\.\s+(.*)$/);
+
+    if (m) {
+
+      currentKhoan = {
+        number: m[1],
+        content: m[2],
+        diems: []
+      };
+
+      currentClause.khoans.push(currentKhoan);
+
+      continue;
+    }
+
+    // -----------------------
+    // Điểm
+    // -----------------------
+    m = line.match(/^([a-z])\)\s+(.*)$/i);
+
+    if (m && currentKhoan) {
+
+      currentKhoan.diems.push({
+        letter: m[1],
+        content: m[2]
+      });
+
+      continue;
+    }
+
+    // -----------------------
+    // Nội dung tiếp theo
+    // -----------------------
+    if (currentKhoan) {
+      currentKhoan.content += "\n" + line;
+    } else {
+      currentClause.content +=
+        (currentClause.content ? "\n" : "") + line;
+    }
+  }
+
+  if (currentClause) {
+    clauses.push(currentClause);
+  }
+
+  return clauses;
+}
+
+// ===========================
+// Export
+// ===========================
+window.parseDocument = parseDocument;
+
+console.log(
+  "HTTV Parser v3 exported:",
+  typeof window.parseDocument
+);
+
+})();
