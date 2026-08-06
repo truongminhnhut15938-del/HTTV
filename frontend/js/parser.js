@@ -1,145 +1,195 @@
-// js/parser.js
-// HTTV - Phân tích PDF và DOCX (offline)
+// frontend/js/parser.js
+// HTTV v1 - Parser PDF (text) và DOCX
 
 // ===========================
-// HÀM CHÍNH
+// PDF.js
+// ===========================
+
+if (window.pdfjsLib) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
+}
+
+// ===========================
+// ĐỌC FILE
 // ===========================
 
 async function parseDocument(file) {
+
+  const ext = file.name.toLowerCase().split(".").pop();
+
   let text = "";
 
-  if (file.name.toLowerCase().endsWith(".pdf")) {
-    text = await parsePdfText(file);
-  } else if (file.name.toLowerCase().endsWith(".docx")) {
-    text = await parseDocx(file);
+  if (ext === "pdf") {
+    text = await parsePDF(file);
+  } else if (ext === "docx") {
+    text = await parseDOCX(file);
   } else {
-    throw new Error("Định dạng không được hỗ trợ");
+    throw new Error("Chỉ hỗ trợ PDF và DOCX");
   }
 
   const metadata = extractMetadata(text);
-  const clauses = splitClauses(text);
+
+  const clauses = extractClauses(text);
 
   return {
-    id: "doc_" + Date.now(),
+    id: Date.now().toString(),
     name: file.name,
-    type: file.name.toLowerCase().endsWith(".pdf") ? "pdf" : "docx",
+    type: ext.toUpperCase(),
+    createdAt: new Date().toISOString(),
     metadata,
     clauses,
-    text,
-    createdAt: new Date().toISOString()
+    rawText: text
   };
 }
 
 // ===========================
-// ĐỌC PDF DẠNG TEXT
+// PDF TEXT
 // ===========================
 
-async function parsePdfText(file) {
-  const arrayBuffer = await file.arrayBuffer();
+async function parsePDF(file) {
 
-  pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
+  if (!window.pdfjsLib) {
+    throw new Error("PDF.js chưa được nạp");
+  }
 
-  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const buffer = await file.arrayBuffer();
+
+  const pdf = await pdfjsLib.getDocument({
+    data: buffer
+  }).promise;
 
   let text = "";
 
-  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-    const page = await pdf.getPage(pageNum);
+  for (let i = 1; i <= pdf.numPages; i++) {
+
+    const page = await pdf.getPage(i);
 
     const content = await page.getTextContent();
 
-    const pageText = content.items.map(i => i.str).join(" ");
+    const pageText = content.items
+      .map(item => item.str)
+      .join(" ");
 
     text += pageText + "\n\n";
   }
 
-  return text.trim();
+  if (!text.trim()) {
+    throw new Error("PDF không chứa text (có thể là PDF scan)");
+  }
+
+  return normalizeText(text);
 }
 
 // ===========================
-// ĐỌC DOCX
+// DOCX
 // ===========================
 
-async function parseDocx(file) {
-  const arrayBuffer = await file.arrayBuffer();
+async function parseDOCX(file) {
 
-  const result = await mammoth.extractRawText({ arrayBuffer });
+  if (!window.mammoth) {
+    throw new Error("Mammoth chưa được nạp");
+  }
 
-  return result.value.trim();
+  const buffer = await file.arrayBuffer();
+
+  const result = await mammoth.extractRawText({
+    arrayBuffer: buffer
+  });
+
+  return normalizeText(result.value || "");
 }
 
 // ===========================
-// TRÍCH THÔNG TIN VĂN BẢN
+// CHUẨN HÓA TEXT
+// ===========================
+
+function normalizeText(text) {
+
+  return text
+    .replace(/\r/g, "")
+    .replace(/\t/g, " ")
+    .replace(/[ ]{2,}/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+// ===========================
+// METADATA
 // ===========================
 
 function extractMetadata(text) {
+
   const metadata = {
+    documentType: "",
     documentNumber: "",
+    issuingAgency: "",
     issuedDate: "",
     effectiveDate: ""
   };
 
-  // Ví dụ: 58/2024/TT-BCA
-  const numberMatch = text.match(/\\b\\d{1,4}\\/\\d{4}\\/[A-ZĐ-]+(?:-[A-Z0-9Đ]+)*\\b/u);
+  const typeMatch = text.match(
+    /(THÔNG TƯ|NGHỊ ĐỊNH|QUYẾT ĐỊNH|CÔNG VĂN|CHỈ THỊ|THÔNG BÁO)/i
+  );
+
+  if (typeMatch) {
+    metadata.documentType = typeMatch[1].toUpperCase();
+  }
+
+  const numberMatch = text.match(
+    /(Số|SO)[: ]+([0-9A-Za-z/\\-.]+)/i
+  );
 
   if (numberMatch) {
-    metadata.documentNumber = numberMatch[0];
+    metadata.documentNumber = numberMatch[2];
   }
 
-  // Ngày ban hành: 15/11/2024
-  const dateMatch = text.match(/\\b\\d{1,2}\\/\\d{1,2}\\/\\d{4}\\b/);
+  const agencyMatch = text.match(
+    /(BỘ [A-ZÀ-Ỹ ]+|ỦY BAN NHÂN DÂN [A-ZÀ-Ỹ ]+|CHÍNH PHỦ|QUỐC HỘI)/i
+  );
+
+  if (agencyMatch) {
+    metadata.issuingAgency = agencyMatch[1];
+  }
+
+  const dateMatch = text.match(
+    /ngày\\s+(\\d{1,2})\\s+tháng\\s+(\\d{1,2})\\s+năm\\s+(\\d{4})/i
+  );
 
   if (dateMatch) {
-    metadata.issuedDate = dateMatch[0];
+    metadata.issuedDate =
+      `${dateMatch[1]}/${dateMatch[2]}/${dateMatch[3]}`;
   }
 
-  // Ngày hiệu lực
   const effectiveMatch = text.match(
-    /có hiệu lực(?: thi hành)?(?: kể từ)?[^\\d]*(\\d{1,2}\\/\\d{1,2}\\/\\d{4})/i
+    /(có hiệu lực từ ngày|hiệu lực từ ngày)\\s+(\\d{1,2})\\s+tháng\\s+(\\d{1,2})\\s+năm\\s+(\\d{4})/i
   );
 
   if (effectiveMatch) {
-    metadata.effectiveDate = effectiveMatch[1];
+    metadata.effectiveDate =
+      `${effectiveMatch[2]}/${effectiveMatch[3]}/${effectiveMatch[4]}`;
   }
 
   return metadata;
 }
 
 // ===========================
-// CHIA ĐIỀU KHOẢN
+// ĐIỀU KHOẢN
 // ===========================
 
-function splitClauses(text) {
+function extractClauses(text) {
+
   const clauses = [];
 
-  const regex = /(Điều\\s+\\d+[\\.\\:]?[^\\n]*)/gi;
+  const regex = /Điều\\s+([0-9]+)[.:]?([\\s\\S]*?)(?=Điều\\s+[0-9]+|$)/gi;
 
-  const matches = [...text.matchAll(regex)];
+  let match;
 
-  if (!matches.length) {
-    return [
-      {
-        title: "Toàn văn",
-        content: text
-      }
-    ];
-  }
-
-  for (let i = 0; i < matches.length; i++) {
-    const start = matches[i].index;
-
-    const end =
-      i < matches.length - 1
-        ? matches[i + 1].index
-        : text.length;
-
-    const block = text.substring(start, end).trim();
-
-    const lines = block.split(/\n+/);
+  while ((match = regex.exec(text)) !== null) {
 
     clauses.push({
-      title: lines[0].trim(),
-      content: block
+      number: match[1],
+      title: `Điều ${match[1]}`,
+      content: match[2].trim()
     });
   }
 
