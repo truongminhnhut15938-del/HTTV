@@ -1,147 +1,131 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <title>HTTV - Hệ Thống Tri Thức Văn Bản</title>
 
-  <link rel="stylesheet" href="frontend/css/style.css" />
+  <!-- CSS -->
+  <link rel="stylesheet" href="frontend/css/style.css">
 </head>
 
 <body>
 
-  <div class="app">
+<div class="app">
 
-    <!-- ===========================
-         HEADER
-    ============================ -->
+  <!-- ===========================
+       HEADER
+  ============================ -->
+  <header class="header">
+    <div class="logo">📚</div>
 
-    <header class="header">
-      <div class="logo">📚</div>
+    <div class="title-group">
+      <h1>HTTV</h1>
+      <p>Hệ Thống Tri Thức Văn Bản</p>
+    </div>
+  </header>
 
-      <div class="title-group">
-        <h1>HTTV</h1>
-        <p>Hệ Thống Tri Thức Văn Bản</p>
+  <!-- ===========================
+       SEARCH
+  ============================ -->
+  <section class="search-section">
+    <input
+      id="searchInput"
+      type="text"
+      placeholder="Tra cứu theo số văn bản, điều khoản hoặc từ khóa..."
+    >
+  </section>
+
+  <!-- ===========================
+       ACTION BAR
+  ============================ -->
+  <section class="action-bar">
+
+    <button id="btnUpload" class="btn primary">
+      ➕ Thêm tài liệu
+    </button>
+
+    <input
+      id="fileInput"
+      type="file"
+      accept=".pdf,.docx"
+      style="display:none"
+    >
+
+  </section>
+
+  <!-- ===========================
+       MAIN LAYOUT
+  ============================ -->
+  <main class="main-layout">
+
+    <!-- KHO TÀI LIỆU -->
+    <aside class="library-panel">
+
+      <div class="panel-title">
+        📂 Kho tài liệu
       </div>
-    </header>
 
-    <!-- ===========================
-         SEARCH
-    ============================ -->
+      <div id="libraryList" class="library-list">
+        <p class="empty">Chưa có tài liệu nào.</p>
+      </div>
 
-    <section class="search-section">
-      <input
-        id="searchInput"
-        type="text"
-        placeholder="Tra cứu theo số văn bản, điều khoản hoặc từ khóa..."
-      />
+    </aside>
+
+    <!-- CHI TIẾT TÀI LIỆU -->
+    <section class="detail-panel">
+
+      <div class="panel-title">
+        📄 Chi tiết tài liệu
+      </div>
+
+      <div id="detailView" class="detail-view">
+
+        <div class="detail-card">
+
+          <h2>Chưa chọn tài liệu</h2>
+
+          <p>
+            Hãy nhấn <b>➕ Thêm tài liệu</b> để nhập một file PDF hoặc DOCX.
+          </p>
+
+          <p>HTTV sẽ tự động phân tích:</p>
+
+          <ul>
+            <li>Số văn bản</li>
+            <li>Ngày ban hành</li>
+            <li>Ngày hiệu lực</li>
+            <li>Các Điều khoản</li>
+          </ul>
+
+        </div>
+
+      </div>
+
     </section>
 
-    <!-- ===========================
-         ACTION BAR
-    ============================ -->
+  </main>
 
-    <section class="action-bar">
+</div>
 
-      <button id="btnUpload" class="btn primary">
-        ➕ Thêm tài liệu
-      </button>
+<!-- ===========================
+     LIBRARIES
+============================ -->
 
-      <input
-        id="fileInput"
-        type="file"
-        accept=".pdf,.docx"
-        style="display:none"
-      />
+<!-- PDF.js -->
+<script src="lib/pdf.min.js"></script>
 
-    </section>
+<!-- Mammoth DOCX -->
+<script src="lib/mammoth.browser.min.js"></script>
 
-    <!-- ===========================
-         MAIN LAYOUT
-    ============================ -->
+<!-- ===========================
+     HTTV MODULES
+============================ -->
 
-    <main class="main-layout">
-
-      <!-- KHO TÀI LIỆU -->
-      <aside class="library-panel">
-
-        <div class="panel-title">
-          📂 Kho tài liệu
-        </div>
-
-        <div id="libraryList" class="library-list">
-          <p class="empty">Chưa có tài liệu nào.</p>
-        </div>
-
-      </aside>
-
-      <!-- CHI TIẾT TÀI LIỆU -->
-      <section class="detail-panel">
-
-        <div class="panel-title">
-          📄 Chi tiết tài liệu
-        </div>
-
-        <div id="detailView" class="detail-view">
-
-          <div class="detail-card">
-
-            <h2>Chưa chọn tài liệu</h2>
-
-            <p>
-              Hãy nhấn <b>➕ Thêm tài liệu</b> để nhập một file
-              PDF hoặc DOCX.
-            </p>
-
-            <p>
-              HTTV sẽ tự động phân tích:
-            </p>
-
-            <ul>
-              <li>Số văn bản</li>
-              <li>Ngày ban hành</li>
-              <li>Ngày hiệu lực</li>
-              <li>Các Điều khoản</li>
-            </ul>
-
-          </div>
-
-        </div>
-
-      </section>
-
-    </main>
-
-  </div>
-
-  <!-- ===========================
-       LIBRARIES
-  ============================ -->
-
-  <script src="lib/pdf.min.js"></script>
-  <script src="lib/mammoth.browser.min.js"></script>
-
-  <!-- ===========================
-       HTTV MODULES
-  ============================ -->
-
-    <!-- Thư viện PDF.js -->
-    <script src="frontend/lib/pdf.min.js"></script>
-
-    <!-- Thư viện DOCX -->
-    <script src="frontend/lib/mammoth.browser.min.js"></script>
-
-    <!-- Storage -->
-    <script src="frontend/js/storage.js"></script>
-
-    <!-- Parser -->
-    <script src="frontend/js/parser.js"></script>
-
-    <!-- App -->
-    <script src="frontend/js/app.js"></script>
-</body>
-</html>
+<script src="frontend/js/storage.js"></script>
+<script src="frontend/js/parser.js"></script>
+<script src="frontend/js/app.js"></script>
 
 </body>
 </html>
