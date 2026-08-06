@@ -2,6 +2,8 @@
 // HTTV v1 - Parser PDF (text) và DOCX
 // Đảm bảo export window.parseDocument để app.js luôn gọi được
 
+console.log("HTTV parser loaded");
+
 (function () {
   "use strict";
 
@@ -128,7 +130,7 @@
     }
 
     const numberMatch = text.match(
-      /(Số|SO)[: ]+([0-9A-Za-z/\\-.]+)/i
+      /(Số|SO)[: ]+([0-9A-Za-z/\-.]+)/i
     );
 
     if (numberMatch) {
@@ -144,7 +146,7 @@
     }
 
     const dateMatch = text.match(
-      /ngày\\s+(\\d{1,2})\\s+tháng\\s+(\\d{1,2})\\s+năm\\s+(\\d{4})/i
+      /ngày\s+(\d{1,2})\s+tháng\s+(\d{1,2})\s+năm\s+(\d{4})/i
     );
 
     if (dateMatch) {
@@ -153,7 +155,7 @@
     }
 
     const effectiveMatch = text.match(
-      /(có hiệu lực từ ngày|hiệu lực từ ngày)\\s+(\\d{1,2})\\s+tháng\\s+(\\d{1,2})\\s+năm\\s+(\\d{4})/i
+      /(có hiệu lực từ ngày|hiệu lực từ ngày)\s+(\d{1,2})\s+tháng\s+(\d{1,2})\s+năm\s+(\d{4})/i
     );
 
     if (effectiveMatch) {
@@ -170,7 +172,7 @@
   function extractClauses(text) {
     const clauses = [];
 
-    const regex = /Điều\\s+([0-9]+)[.:]?([\\s\\S]*?)(?=Điều\\s+[0-9]+|$)/gi;
+    const regex = /Điều\s+([0-9]+)[.:]?([\s\S]*?)(?=Điều\s+[0-9]+|$)/gi;
 
     let match;
 
@@ -189,5 +191,6 @@
   // Export ra global
   // ===========================
   window.parseDocument = parseDocument;
+  console.log("HTTV parseDocument exported", typeof window.parseDocument);
 
 })();
