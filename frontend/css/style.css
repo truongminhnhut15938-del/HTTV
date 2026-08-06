@@ -1,40 +1,310 @@
-*{
-        margin:0;
-            padding:0;
-                box-sizing:border-box;
-                    font-family:Arial,Helvetica,sans-serif;
-                    }
+  /* ===========================
+   HTTV - Hệ Thống Tri Thức Văn Bản
+   Giao diện v1
+=========================== */
 
-                    body{
-                        background:#f5f5f5;
-                            color:#222;
-                            }
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
 
-                            header{
-                                background:#1565C0;
-                                    color:white;
-                                        text-align:center;
-                                            padding:20px;
-                                            }
+:root{
+    --primary:#1565ff;
+    --primary-dark:#0d47c9;
+    --bg:#f3f5f9;
+    --card:#ffffff;
+    --text:#222;
+    --sub:#666;
+    --border:#e5e7eb;
+    --shadow:0 10px 24px rgba(0,0,0,.08);
+    --radius:18px;
+}
 
-                                            header p{
-                                                margin-top:8px;
-                                                }
+body{
+    font-family: Arial, Helvetica, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+}
 
-                                                main{
-                                                    padding:20px;
-                                                    }
+.app{
+    max-width: 960px;
+    margin: 0 auto;
+    min-height: 100vh;
+}
 
-                                                    .search-box{
-                                                        display:flex;
-                                                            gap:10px;
-                                                                margin-bottom:20px;
-                                                                }
+/* ===========================
+   HEADER
+=========================== */
 
-                                                                .search-box input{
-                                                                    flex:1;
-                                                                        padding:12px;
-                                                                            border-radius:8px;
+.header{
+    background: linear-gradient(180deg,var(--primary),var(--primary-dark));
+    color: #fff;
+    text-align: center;
+    padding: 28px 18px;
+    border-bottom-left-radius: 22px;
+    border-bottom-right-radius: 22px;
+    box-shadow: var(--shadow);
+}
+
+.logo{
+    font-size: 32px;
+    margin-bottom: 8px;
+}
+
+.header h1{
+    font-size: 44px;
+    letter-spacing: .5px;
+    margin-bottom: 8px;
+}
+
+.header p{
+    font-size: 18px;
+    opacity: .95;
+}
+
+/* ===========================
+   SEARCH
+=========================== */
+
+.search-section{
+    padding: 18px;
+}
+
+.search-section input{
+    width: 100%;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    font-size: 16px;
+    background: #fff;
+    outline: none;
+}
+
+.search-section input:focus{
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(21,101,255,.15);
+}
+
+/* ===========================
+   ACTION BAR
+=========================== */
+
+.action-bar{
+    padding: 0 18px 18px;
+}
+
+.btn{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: none;
+    border-radius: 14px;
+    padding: 14px 18px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: .2s;
+}
+
+.btn.primary{
+    background: var(--primary);
+    color: #fff;
+    box-shadow: var(--shadow);
+}
+
+.btn.primary:hover{
+    background: var(--primary-dark);
+}
+
+.btn.primary:disabled{
+    opacity: .7;
+    cursor: wait;
+}
+
+/* ===========================
+   LAYOUT
+=========================== */
+
+.main-layout{
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 18px;
+    padding: 0 18px 24px;
+}
+
+.panel-title{
+    font-size: 26px;
+    font-weight: bold;
+    margin-bottom: 14px;
+}
+
+/* ===========================
+   LIBRARY
+=========================== */
+
+.library-panel{
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 18px;
+    box-shadow: var(--shadow);
+    height: fit-content;
+}
+
+.library-list{
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.doc-item{
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+    background: #fafafa;
+    cursor: pointer;
+    transition: .2s;
+}
+
+.doc-item:hover{
+    border-color: var(--primary);
+    background: #f5f9ff;
+}
+
+.doc-item.active{
+    border-color: var(--primary);
+    background: #eef4ff;
+}
+
+.doc-item h3{
+    font-size: 17px;
+    margin-bottom: 8px;
+}
+
+.doc-item p{
+    color: var(--sub);
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.empty{
+    color: var(--sub);
+    text-align: center;
+    padding: 18px;
+}
+
+/* ===========================
+   DETAIL
+=========================== */
+
+.detail-panel{
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 18px;
+    box-shadow: var(--shadow);
+}
+
+.detail-card{
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.detail-card h2{
+    font-size: 34px;
+    line-height: 1.2;
+}
+
+.detail-card p{
+    color: #333;
+    line-height: 1.6;
+    font-size: 16px;
+}
+
+.detail-card ul{
+    padding-left: 22px;
+    line-height: 1.8;
+}
+
+.meta-grid{
+    display: grid;
+    grid-template-columns: repeat(2,1fr);
+    gap: 12px;
+}
+
+.meta-item{
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+    background: #fafafa;
+}
+
+.meta-item .label{
+    color: var(--sub);
+    font-size: 13px;
+    margin-bottom: 6px;
+}
+
+.meta-item .value{
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.clause-list{
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.clause{
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+    background: #fff;
+}
+
+.clause h4{
+    color: var(--primary);
+    margin-bottom: 8px;
+}
+
+/* ===========================
+   MOBILE
+=========================== */
+
+@media (max-width: 768px){
+
+    .header{
+        padding: 22px 16px;
+    }
+
+    .header h1{
+        font-size: 38px;
+    }
+
+    .header p{
+        font-size: 17px;
+    }
+
+    .main-layout{
+        grid-template-columns: 1fr;
+        padding: 0 16px 24px;
+    }
+
+    .panel-title{
+        font-size: 22px;
+    }
+
+    .detail-card h2{
+        font-size: 30px;
+    }
+
+    .meta-grid{
+        grid-template-columns: 1fr;
+    }
+}                                                                          border-radius:8px;
                                                                                 border:1px solid #ccc;
                                                                                 }
 
