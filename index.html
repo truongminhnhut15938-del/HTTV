@@ -254,47 +254,85 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
     }
 
     // ===========================
-    // THÊM TÀI LIỆU
+    // THÊM TÀI LIỆU (HTTV Offline)
     // ===========================
-    document.getElementById("btnUpload").addEventListener("click", () => {
-        document.getElementById("fileInput").click();
-    });
+    const btnUpload = document.getElementById("btnUpload");
+    const fileInput = document.getElementById("fileInput");
+    const libraryList = document.getElementById("libraryList");
 
-    document.getElementById("fileInput").addEventListener("change", async (e) => {
+         btnUpload.addEventListener("click", () => {
+         fileInput.click();
+});
 
-        const file = e.target.files[0];
-        if (!file) return;
+fileInput.addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
 
-        try {
+    if (
+        !file.name.toLowerCase().endsWith(".pdf") &&
+        !file.name.toLowerCase().endsWith(".docx")
+    ) {
+        alert("Chỉ hỗ trợ PDF và DOCX");
+        return;
+    }
 
-            showStatus("Đang đọc tài liệu...");
+    try {
+        btnUpload.disabled = true;
+        btnUpload.textContent = "Đang phân tích...";
 
-            const text = await readDocument(file);
+        const doc = await parseDocument(file);
 
-            const doc = await saveDocument({
-                title: file.name,
-                fileName: file.name,
-                fileType: file.type,
-                rawText: text
-            });
+        addDocument(doc);
 
-            showStatus("Đã lưu: " + doc.fileName);
+        renderLibrary();
 
-            await loadDocumentList();
+        alert("Đã thêm tài liệu: " + file.name);
 
-        } catch (err) {
+    } catch (err) {
+        console.error(err);
+        alert("Lỗi khi đọc tài liệu: " + err.message);
+    } finally {
+        btnUpload.disabled = false;
+        btnUpload.textContent = "Thêm tài liệu";
+        fileInput.value = "";
+    }
+});
 
-            console.error(err);
+function renderLibrary() {
+    const docs = loadDocuments();
 
-            showStatus("Lỗi: " + err.message);
+    if (!docs.length) {
+        libraryList.innerHTML =
+            '<p class="empty">Chưa có tài liệu nào.</p>';
+        return;
+    }
 
-        } finally {
+    libraryList.innerHTML = docs.map(doc => `
+        <div class="doc-item">
+            <h3>${doc.name}</h3>
 
-            e.target.value = "";
+            <p><b>Số văn bản:</b>
+                ${doc.metadata.documentNumber || "Chưa xác định"}
+            </p>
 
-        }
+            <p><b>Ngày ban hành:</b>
+                ${doc.metadata.issuedDate || "Chưa xác định"}
+            </p>
 
-    });
+            <p><b>Ngày hiệu lực:</b>
+                ${doc.metadata.effectiveDate || "Chưa xác định"}
+            </p>
+
+            <p><b>Điều khoản:</b>
+                ${doc.clauses.length}
+            </p>
+        </div>
+    `).join("");
+}
+
+// Hiển thị kho tài liệu khi mở HTTV
+renderLibrary();
+
 
     // ===========================
     // DANH SÁCH TÀI LIỆU
@@ -375,6 +413,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
     <script src="lib/pdf.min.js"></script>
     <script src="lib/mammoth.browser.min.js"></script>
     <script src="js/parser.js"></script>
+    <script src="js/storage.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>
