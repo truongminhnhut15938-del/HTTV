@@ -1,8 +1,8 @@
 // frontend/js/parser.js
-// HTTV v1 - Parser PDF (text) và DOCX
-// Đảm bảo export window.parseDocument để app.js luôn gọi được
+// HTTV v2 - Parser PDF (text) và DOCX
+// Không thay đổi giao diện hay API đầu ra của HTTV
 
-console.log("HTTV parser loaded");
+console.log("HTTV Parser v2 loaded");
 
 (function () {
   "use strict";
@@ -74,7 +74,9 @@ console.log("HTTV parser loaded");
     }
 
     if (!text.trim()) {
-      throw new Error("PDF không chứa text (PDF scan sẽ được hỗ trợ ở bước OCR)");
+      throw new Error(
+        "PDF không chứa text (PDF scan sẽ được hỗ trợ ở bước OCR)"
+      );
     }
 
     return text;
@@ -98,19 +100,34 @@ console.log("HTTV parser loaded");
   }
 
   // ===========================
-  // Chuẩn hóa text
+  // Chuẩn hóa văn bản
   // ===========================
   function normalizeText(text) {
-    return text
-      .replace(/\r/g, "")
-      .replace(/\t/g, " ")
-      .replace(/[ ]{2,}/g, " ")
-      .replace(/\n{3,}/g, "\n\n")
-      .trim();
+    if (!text) return "";
+
+    // Chuẩn hóa xuống dòng
+    text = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+
+    // Loại khoảng trắng dư
+    text = text.replace(/[ \t]+/g, " ");
+
+    // Ghép các dòng bị cắt giữa câu
+    text = text.replace(/([a-zà-ỹ0-9,;:])\n([a-zà-ỹ])/gi, "$1 $2");
+
+    // Giữ nguyên dòng tiêu đề
+    text = text.replace(/\n{3,}/g, "\n\n");
+
+    // Chuẩn hóa "Số :" -> "Số:"
+    text = text.replace(/Số\s*:/gi, "Số:");
+
+    // Chuẩn hóa "Điều1" -> "Điều 1"
+    text = text.replace(/Điều\s*([0-9]+)/gi, "Điều $1");
+
+    return text.trim();
   }
 
   // ===========================
-  // Trích metadata
+  // Trích metadata pháp lý Việt Nam
   // ===========================
   function extractMetadata(text) {
     const metadata = {
@@ -121,46 +138,66 @@ console.log("HTTV parser loaded");
       effectiveDate: ""
     };
 
-    const typeMatch = text.match(
-      /(THÔNG TƯ|NGHỊ ĐỊNH|QUYẾT ĐỊNH|CÔNG VĂN|CHỈ THỊ|THÔNG BÁO)/i
-    );
+    // -----------------------
+    // Loại văn bản
+    // -----------------------
+    const typeRegex =
+      /^(THÔNG TƯ|NGHỊ ĐỊNH|QUYẾT ĐỊNH|CÔNG VĂN|THÔNG BÁO|CHỈ THỊ|LUẬT|NGHỊ QUYẾT)\b/im;
+
+    const typeMatch = text.match(typeRegex);
 
     if (typeMatch) {
       metadata.documentType = typeMatch[1].toUpperCase();
     }
 
-    const numberMatch = text.match(
-      /(Số|SO)[: ]+([0-9A-Za-z/\-.]+)/i
-    );
+    // -----------------------
+    // Số hiệu văn bản
+    // -----------------------
+    const numberRegex =
+      /Số:?\s*([0-9]{1,4}\/[0-9]{4}\/[A-ZÀ-Ỹ0-9-]+|[0-9]{1,4}\/[A-ZÀ-Ỹ0-9-]+|[0-9]{1,4}[A-ZÀ-Ỹ0-9\/-]*)/i;
+
+    const numberMatch = text.match(numberRegex);
 
     if (numberMatch) {
-      metadata.documentNumber = numberMatch[2];
+      metadata.documentNumber = numberMatch[1].trim();
     }
 
-    const agencyMatch = text.match(
-      /(BỘ [A-ZÀ-Ỹ ]+|ỦY BAN NHÂN DÂN [A-ZÀ-Ỹ ]+|CHÍNH PHỦ|QUỐC HỘI)/i
-    );
+    // -----------------------
+    // Cơ quan ban hành
+    // -----------------------
+    const agencyRegex =
+      /(BỘ [A-ZÀ-Ỹ ]+|CHÍNH PHỦ|QUỐC HỘI|THỦ TƯỚNG CHÍNH PHỦ|ỦY BAN NHÂN DÂN [A-ZÀ-Ỹ ]+|UBND [A-ZÀ-Ỹ ]+)/i;
+
+    const agencyMatch = text.match(agencyRegex);
 
     if (agencyMatch) {
-      metadata.issuingAgency = agencyMatch[1];
+      metadata.issuingAgency = agencyMatch[1].trim();
     }
 
-    const dateMatch = text.match(
-      /ngày\s+(\d{1,2})\s+tháng\s+(\d{1,2})\s+năm\s+(\d{4})/i
-    );
+    // -----------------------
+    // Ngày ban hành
+    // -----------------------
+    const issuedRegex =
+      /ngày\s+(\d{1,2})\s+tháng\s+(\d{1,2})\s+năm\s+(\d{4})/i;
 
-    if (dateMatch) {
+    const issuedMatch = text.match(issuedRegex);
+
+    if (issuedMatch) {
       metadata.issuedDate =
-        `${dateMatch[1]}/${dateMatch[2]}/${dateMatch[3]}`;
+        `${issuedMatch[1].padStart(2, "0")}/${issuedMatch[2].padStart(2, "0")}/${issuedMatch[3]}`;
     }
 
-    const effectiveMatch = text.match(
-      /(có hiệu lực từ ngày|hiệu lực từ ngày)\s+(\d{1,2})\s+tháng\s+(\d{1,2})\s+năm\s+(\d{4})/i
-    );
+    // -----------------------
+    // Ngày hiệu lực
+    // -----------------------
+    const effectiveRegex =
+      /(có hiệu lực từ ngày|hiệu lực từ ngày|có hiệu lực kể từ ngày)\s+(\d{1,2})\s+tháng\s+(\d{1,2})\s+năm\s+(\d{4})/i;
+
+    const effectiveMatch = text.match(effectiveRegex);
 
     if (effectiveMatch) {
       metadata.effectiveDate =
-        `${effectiveMatch[2]}/${effectiveMatch[3]}/${effectiveMatch[4]}`;
+        `${effectiveMatch[2].padStart(2, "0")}/${effectiveMatch[3].padStart(2, "0")}/${effectiveMatch[4]}`;
     }
 
     return metadata;
@@ -172,15 +209,21 @@ console.log("HTTV parser loaded");
   function extractClauses(text) {
     const clauses = [];
 
-    const regex = /Điều\s+([0-9]+)[.:]?([\s\S]*?)(?=Điều\s+[0-9]+|$)/gi;
+    // Bắt Điều 1., Điều 1:, Điều 1
+    const regex =
+      /(?:^|\n)\s*(Điều\s+([0-9]+)(?:[.:])?)([\s\S]*?)(?=(?:\n\s*Điều\s+[0-9]+(?:[.:])?)|$)/gi;
 
     let match;
 
     while ((match = regex.exec(text)) !== null) {
+      const title = match[1].trim();
+      const number = match[2].trim();
+      const content = match[3].trim();
+
       clauses.push({
-        number: match[1],
-        title: `Điều ${match[1]}`,
-        content: match[2].trim()
+        number,
+        title,
+        content
       });
     }
 
@@ -188,9 +231,13 @@ console.log("HTTV parser loaded");
   }
 
   // ===========================
-  // Export ra global
+  // Export
   // ===========================
   window.parseDocument = parseDocument;
-  console.log("HTTV parseDocument exported", typeof window.parseDocument);
+
+  console.log(
+    "HTTV Parser v2 exported:",
+    typeof window.parseDocument
+  );
 
 })();
