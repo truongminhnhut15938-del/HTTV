@@ -88,26 +88,28 @@
     }
 
     libraryList.innerHTML = filtered.map(doc => `
-  <div class="doc-item" data-id="${doc.id}">
+      <div class="doc-item" data-id="${doc.id}">
 
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-      <h3 style="margin:0;">${doc.name}</h3>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
+          <h3 style="margin:0;flex:1;">${doc.name}</h3>
 
-      <button class="btn-delete"
-              data-delete="${doc.id}"
-              style="background:none;border:none;color:#d9534f;font-size:18px;cursor:pointer;">
-        🗑
-      </button>
-    </div>
+          <button class="btn-delete"
+                  data-delete="${doc.id}"
+                  style="background:#d9534f;color:white;border:none;padding:4px 10px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">
+            Xóa
+          </button>
+        </div>
 
-    <p><b>Số:</b> ${doc.metadata.documentNumber || "Chưa xác định"}</p>
-    <p><b>Loại:</b> ${doc.metadata.documentType || "Chưa xác định"}</p>
-    <p><b>Điều khoản:</b> ${doc.clauses.length}</p>
+        <p><b>Số:</b> ${doc.metadata.documentNumber || "Chưa xác định"}</p>
+        <p><b>Loại:</b> ${doc.metadata.documentType || "Chưa xác định"}</p>
+        <p><b>Điều khoản:</b> ${doc.clauses.length}</p>
 
-  </div>
-`).join("");
+      </div>
+    `).join("");
 
-    // Gắn sự kiện click
+    // ===========================
+    // Mở tài liệu
+    // ===========================
     document.querySelectorAll(".doc-item").forEach(item => {
       item.addEventListener("click", () => {
         const id = item.dataset.id;
@@ -117,33 +119,35 @@
         if (doc) showDetail(doc);
       });
     });
+
+    // ===========================
+    // Xóa từng tài liệu
+    // ===========================
+    document.querySelectorAll(".btn-delete").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+
+        e.stopPropagation();
+
+        const id = btn.dataset.delete;
+
+        const ok = confirm("Xóa tài liệu này khỏi HTTV?");
+
+        if (!ok) return;
+
+        let docs = loadDocuments();
+
+        docs = docs.filter(d => d.id !== id);
+
+        saveDocuments(docs);
+
+        renderLibrary(searchInput.value);
+
+        detailView.innerHTML =
+          '<p class="empty">Chưa chọn tài liệu.</p>';
+      });
+    });
   }
 
-  // Gắn sự kiện xóa
-document.querySelectorAll(".btn-delete").forEach(btn => {
-  btn.addEventListener("click", (e) => {
-
-    e.stopPropagation();
-
-    const id = btn.dataset.delete;
-
-    const ok = confirm("Xóa tài liệu này khỏi HTTV?");
-
-    if (!ok) return;
-
-    let docs = loadDocuments();
-
-    docs = docs.filter(d => d.id !== id);
-
-    saveDocuments(docs);
-
-    renderLibrary(searchInput.value);
-
-    detailView.innerHTML =
-      '<p class="empty">Chưa chọn tài liệu.</p>';
-  });
-});
-  
   // ===========================
   // Hiển thị chi tiết
   // ===========================
