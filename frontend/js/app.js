@@ -1,75 +1,115 @@
 // js/app.js
-// HTTV - Quản lý tài liệu offline
-
-const btnUpload = document.getElementById("btnUpload");
-const fileInput = document.getElementById("fileInput");
-const libraryList = document.getElementById("libraryList");
-const detailView = document.getElementById("detailView");
-const searchInput = document.getElementById("searchInput");
+// HTTV - Quản lý tài liệu offline (ổn định)
 
 let currentDocumentId = null;
+
+function $(id) {
+  return document.getElementById(id);
+}
+
+const btnUpload = $("btnUpload");
+const fileInput = $("fileInput");
+const libraryList = $("libraryList");
+const detailView = $("detailView");
+const searchInput = $("searchInput");
 
 // ===========================
 // KHỞI TẠO
 // ===========================
 
 window.addEventListener("DOMContentLoaded", () => {
-  renderLibrary();
+  try {
+    renderLibrary();
+  } catch (e) {
+    console.error("Lỗi khởi tạo HTTV:", e);
+  }
 });
 
 // ===========================
 // THÊM TÀI LIỆU
 // ===========================
 
-btnUpload.addEventListener("click", () => {
-  fileInput.click();
-});
+if (btnUpload && fileInput) {
 
-fileInput.addEventListener("change", async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
+  btnUpload.addEventListener("click", () => {
+    fileInput.click();
+  });
 
-  const lower = file.name.toLowerCase();
+  fileInput.addEventListener("change", async (e) => {
 
-  if (!lower.endsWith(".pdf") && !lower.endsWith(".docx")) {
-    alert("Chỉ hỗ trợ PDF và DOCX");
-    return;
-  }
+    const file = e.target.files[0];
+    if (!file) return;
 
-  try {
-    btnUpload.disabled = true;
-    btnUpload.textContent = "Đang phân tích...";
+    const lower = file.name.toLowerCase();
 
-    const doc = await parseDocument(file);
+    if (!lower.endsWith(".pdf") && !lower.endsWith(".docx")) {
+      alert("Chỉ hỗ trợ PDF và DOCX");
+      return;
+    }
 
-    addDocument(doc);
+    if (typeof parseDocument !== "function") {
+      alert("parser.js chưa được nạp.");
+      return;
+    }
 
-    renderLibrary();
+    if (typeof addDocument !== "function") {
+      alert("storage.js chưa được nạp.");
+      return;
+    }
 
-    openDocument(doc.id);
+    try {
 
-    alert("Đã thêm tài liệu: " + file.name);
+      btnUpload.disabled = true;
+      btnUpload.textContent = "Đang phân tích...";
 
-  } catch (err) {
-    console.error(err);
-    alert("Lỗi khi đọc tài liệu: " + err.message);
-  } finally {
-    btnUpload.disabled = false;
-    btnUpload.textContent = "➕ Thêm tài liệu";
-    fileInput.value = "";
-  }
-});
+      const doc = await parseDocument(file);
+
+      addDocument(doc);
+
+      renderLibrary();
+
+      openDocument(doc.id);
+
+      alert("Đã thêm tài liệu: " + file.name);
+
+    } catch (err) {
+
+      console.error(err);
+
+      alert("Lỗi khi đọc tài liệu: " + err.message);
+
+    } finally {
+
+      btnUpload.disabled = false;
+      btnUpload.textContent = "➕ Thêm tài liệu";
+      fileInput.value = "";
+
+    }
+
+  });
+
+}
 
 // ===========================
 // HIỂN THỊ KHO TÀI LIỆU
 // ===========================
 
 function renderLibrary(keyword = "") {
+
+  if (!libraryList) return;
+
+  if (typeof loadDocuments !== "function") {
+    libraryList.innerHTML =
+      '<p class="empty">Thiếu storage.js</p>';
+    return;
+  }
+
   const docs = loadDocuments();
 
   let filtered = docs;
 
   if (keyword.trim()) {
+
     const k = keyword.toLowerCase();
 
     filtered = docs.filter(doc =>
@@ -77,12 +117,15 @@ function renderLibrary(keyword = "") {
       (doc.metadata.documentNumber || "").toLowerCase().includes(k) ||
       (doc.text || "").toLowerCase().includes(k)
     );
+
   }
 
   if (!filtered.length) {
+
     libraryList.innerHTML =
-      '<p class="empty">Không có tài liệu phù hợp.</p>';
+      '<p class="empty">Chưa có tài liệu nào.</p>';
     return;
+
   }
 
   libraryList.innerHTML = filtered.map(doc => `
@@ -98,6 +141,7 @@ function renderLibrary(keyword = "") {
       </div>
     </div>
   `).join("");
+
 }
 
 // ===========================
@@ -105,17 +149,21 @@ function renderLibrary(keyword = "") {
 // ===========================
 
 window.openDocument = function(id) {
+
+  if (typeof getDocument !== "function") return;
+
   const doc = getDocument(id);
 
   if (!doc) return;
 
   currentDocumentId = id;
 
-  renderLibrary(searchInput.value);
+  renderLibrary(searchInput ? searchInput.value : "");
+
+  if (!detailView) return;
 
   detailView.innerHTML = `
     <div class="detail-card">
-
       <h2>${doc.name}</h2>
 
       <div class="detail-grid">
@@ -148,6 +196,7 @@ window.openDocument = function(id) {
       ${renderClauses(doc.clauses)}
     </div>
   `;
+
 };
 
 // ===========================
@@ -155,10 +204,11 @@ window.openDocument = function(id) {
 // ===========================
 
 function renderClauses(clauses) {
+
   if (!clauses.length) {
     return `
       <div class="detail-card">
-        <p>Không tìm thấy điều khoản. Toàn bộ nội dung sẽ được hiển thị khi parser hoàn thiện.</p>
+        <p>Không tìm thấy điều khoản.</p>
       </div>
     `;
   }
@@ -169,31 +219,40 @@ function renderClauses(clauses) {
       <p>${clause.content}</p>
     </div>
   `).join("");
+
 }
 
 // ===========================
 // TRA CỨU
 // ===========================
 
-searchInput.addEventListener("input", () => {
-  renderLibrary(searchInput.value);
+if (searchInput) {
 
-  const keyword = searchInput.value.trim().toLowerCase();
+  searchInput.addEventListener("input", () => {
 
-  if (!keyword || !currentDocumentId) return;
+    renderLibrary(searchInput.value);
 
-  const doc = getDocument(currentDocumentId);
+    if (!currentDocumentId || typeof getDocument !== "function") return;
 
-  if (!doc) return;
+    const keyword = searchInput.value.trim().toLowerCase();
 
-  const filteredClauses = doc.clauses.filter(c =>
-    (c.title || "").toLowerCase().includes(keyword) ||
-    (c.content || "").toLowerCase().includes(keyword)
-  );
+    const doc = getDocument(currentDocumentId);
 
-  const container = document.getElementById("clausesContainer");
+    if (!doc) return;
 
-  if (container) {
-    container.innerHTML = renderClauses(filteredClauses);
-  }
-});
+    const filtered = keyword
+      ? doc.clauses.filter(c =>
+          (c.title || "").toLowerCase().includes(keyword) ||
+          (c.content || "").toLowerCase().includes(keyword)
+        )
+      : doc.clauses;
+
+    const container = $("clausesContainer");
+
+    if (container) {
+      container.innerHTML = renderClauses(filtered);
+    }
+
+  });
+
+}
