@@ -49,72 +49,126 @@ console.log("HTTV Parser v3 loaded");
   }
 
   // ===========================
-  // Đọc PDF theo từng dòng
   // ===========================
-  async function parsePDFLines(file) {
-    if (!window.pdfjsLib) {
-      throw new Error("PDF.js chưa được nạp");
-    }
-
-    const buffer = await file.arrayBuffer();
-
-    const pdf = await pdfjsLib.getDocument({
-      data: buffer
-    }).promise;
-
-    const allLines = [];
-
-    for (let pageIndex = 1; pageIndex <= pdf.numPages; pageIndex++) {
-
-      const page = await pdf.getPage(pageIndex);
-
-      const content = await page.getTextContent();
-
-      // Gom text theo tọa độ Y
-      const rows = {};
-
-      for (const item of content.items) {
-
-        const y = Math.round(item.transform[5]);
-
-        if (!rows[y]) rows[y] = [];
-
-        rows[y].push({
-          x: item.transform[4],
-          text: item.str
-        });
-      }
-
-      // Sắp xếp từ trên xuống
-      const ys = Object.keys(rows)
-        .map(Number)
-        .sort((a, b) => b - a);
-
-      for (const y of ys) {
-
-        const line = rows[y]
-          .sort((a, b) => a.x - b.x)
-          .map(i => i.text)
-          .join(" ")
-          .replace(/\s+/g, " ")
-          .trim();
-
-        if (line) {
-          allLines.push(line);
-        }
-      }
-
-      allLines.push("");
-    }
-
-    if (!allLines.length) {
-      throw new Error(
-        "PDF không chứa text (PDF scan sẽ được hỗ trợ ở bước OCR)"
-      );
-    }
-
-    return allLines;
+// Đọc PDF theo cấu trúc dòng (HTTV Parser v4)
+// Tối ưu cho văn bản pháp luật Việt Nam
+// ===========================
+async function parsePDFLines(file) {
+  if (!window.pdfjsLib) {
+    throw new Error("PDF.js chưa được nạp");
   }
+
+  const buffer = await file.arrayBuffer();
+
+  const pdf = await pdfjsLib.getDocument({
+    data: buffer
+  }).promise;
+
+  const allLines = [];
+
+  for (let pageIndex = 1; pageIndex <= pdf.numPages; pageIndex++) {
+
+    const page = await pdf.getPage(pageIndex);
+
+    const content = await page.getTextContent();
+
+    // -----------------------
+    // Gom item theo tọa độ Y
+    // -----------------------
+    const rows = new Map();
+
+    for (const item of content.items) {
+
+      const y = Math.round(item.transform[5]);
+
+      if (!rows.has(y)) {
+        rows.set(y, []);
+      }
+
+      rows.get(y).push({
+        x: item.transform[4],
+        text: item.str
+      });
+    }
+
+    // -----------------------
+    // Sắp xếp từ trên xuống
+    // -----------------------
+    const ys = Array.from(rows.keys())
+      .sort((a, b) => b - a);
+
+    const pageLines = [];
+
+    for (const y of ys) {
+
+      const items = rows.get(y)
+        .sort((a, b) => a.x - b.x);
+
+      let line = "";
+
+      let lastX = null;
+
+      for (const item of items) {
+
+        if (lastX !== null) {
+
+          const gap = item.x - lastX;
+
+          if (gap > 12) {
+            line += " ";
+          }
+        }
+
+        line += item.text;
+
+        lastX = item.x + item.text.length * 4;
+      }
+
+      line = line
+        .replace(/\s+/g, " ")
+        .trim();
+
+      if (line) {
+        pageLines.push(line);
+      }
+    }
+
+    // -----------------------
+    // Ghép các dòng bị tách
+    // Ví dụ:
+    // NGÂN HÀNG
+    // NHÀ NƯỚC
+    // VIỆT NAM
+    // -----------------------
+    for (let i = 0; i < pageLines.length; i++) {
+
+      let line = pageLines[i];
+
+      while (
+        i + 1 < pageLines.length &&
+        line.length < 40 &&
+        pageLines[i + 1].length < 40 &&
+        !/^Điều\s+\d+/i.test(pageLines[i + 1]) &&
+        !/^Số:/i.test(pageLines[i + 1])
+      ) {
+        line += " " + pageLines[i + 1];
+        i++;
+      }
+
+      allLines.push(line);
+    }
+
+    allLines.push("");
+  }
+
+  if (!allLines.length) {
+    throw new Error(
+      "PDF không chứa text (PDF scan sẽ được hỗ trợ ở bước OCR)"
+    );
+  }
+
+  return allLines;
+}
 
   // ===========================
   // Đọc DOCX theo từng dòng
