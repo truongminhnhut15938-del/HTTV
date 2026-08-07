@@ -235,7 +235,9 @@ async function parsePDFLines(file) {
 
   // ===== PHẦN B SẼ ĐƯỢC NỐI TIẾP NGAY SAU ĐÂY =====
 // ===========================
-// Trích metadata theo từng dòng
+// ===========================
+// Trích metadata theo từng dòng (HTTV Parser v4)
+// Tối ưu riêng cho văn bản NHNN / Bộ / Chính phủ
 // ===========================
 function extractMetadataFromLines(lines) {
 
@@ -247,24 +249,85 @@ function extractMetadataFromLines(lines) {
     effectiveDate: ""
   };
 
-  // -----------------------
-  // 1. Cơ quan ban hành
-  // -----------------------
-  for (const line of lines.slice(0, 12)) {
+  // Ghép phần đầu văn bản để dò
+  const head = lines.slice(0, 30).join("\n");
 
-    if (
-      /NGÂN HÀNG NHÀ NƯỚC/i.test(line) ||
-      /^BỘ /i.test(line) ||
-      /CHÍNH PHỦ/i.test(line) ||
-      /QUỐC HỘI/i.test(line) ||
-      /THỦ TƯỚNG CHÍNH PHỦ/i.test(line) ||
-      /ỦY BAN NHÂN DÂN/i.test(line) ||
-      /^UBND /i.test(line)
-    ) {
-      metadata.issuingAgency = line.trim();
-      break;
-    }
+  // Chuẩn hóa lỗi OCR thường gặp
+  const normalized = head
+    .replace(/S6:/gi, "Số:")
+    .replace(/SO:/gi, "Số:")
+    .replace(/THONG TIr/gi, "THÔNG TƯ")
+    .replace(/THONG TU/gi, "THÔNG TƯ")
+    .replace(/THONG TƯ/gi, "THÔNG TƯ")
+    .replace(/NGAN HANG NHA/gi, "NGÂN HÀNG NHÀ")
+    .replace(/VIET NAM/gi, "VIỆT NAM")
+    .replace(/Ha Nai/gi, "Hà Nội")
+    .replace(/ngay/gi, "ngày")
+    .replace(/thong/gi, "tháng")
+    .replace(/nom/gi, "năm");
+
+  // -----------------------
+  // Loại văn bản
+  // -----------------------
+  const typeMatch = normalized.match(
+    /(THÔNG TƯ|NGHỊ ĐỊNH|QUYẾT ĐỊNH|CÔNG VĂN|THÔNG BÁO|CHỈ THỊ|LUẬT|NGHỊ QUYẾT)/i
+  );
+
+  if (typeMatch) {
+    metadata.documentType = typeMatch[1].toUpperCase();
   }
+
+  // -----------------------
+  // Số hiệu
+  // -----------------------
+  const numberMatch = normalized.match(
+    /Số:\s*([0-9]{1,4}\/[0-9]{4}\/[A-Z0-9-]+)/i
+  );
+
+  if (numberMatch) {
+    metadata.documentNumber = numberMatch[1].trim();
+  }
+
+  // -----------------------
+  // Cơ quan ban hành
+  // -----------------------
+  const agencyMatch = normalized.match(
+    /(NGÂN HÀNG NHÀ NƯỚC VIỆT NAM|BỘ [A-ZÀ-Ỹ ]+|CHÍNH PHỦ|QUỐC HỘI|THỦ TƯỚNG CHÍNH PHỦ|ỦY BAN NHÂN DÂN [A-ZÀ-Ỹ ]+)/i
+  );
+
+  if (agencyMatch) {
+    metadata.issuingAgency = agencyMatch[1].toUpperCase();
+  }
+
+  // -----------------------
+  // Ngày ban hành
+  // Ví dụ: Hà Nội, ngày 06 tháng 1 năm 2014
+  // -----------------------
+  const dateMatch = normalized.match(
+    /ngày\s+(\d{1,2})\s+tháng\s+(\d{1,2})\s+năm\s+(\d{4})/i
+  );
+
+  if (dateMatch) {
+    metadata.issuedDate =
+      `${dateMatch[1].padStart(2, "0")}/${dateMatch[2].padStart(2, "0")}/${dateMatch[3]}`;
+  }
+
+  // -----------------------
+  // Ngày hiệu lực
+  // -----------------------
+  const fullText = lines.join("\n");
+
+  const eff = fullText.match(
+    /(có hiệu lực|hiệu lực từ ngày|có hiệu lực kể từ ngày).*?(\d{1,2})\s+tháng\s+(\d{1,2})\s+năm\s+(\d{4})/i
+  );
+
+  if (eff) {
+    metadata.effectiveDate =
+      `${eff[2].padStart(2, "0")}/${eff[3].padStart(2, "0")}/${eff[4]}`;
+  }
+
+  return metadata;
+}
 
   // -----------------------
   // 2. Loại văn bản
