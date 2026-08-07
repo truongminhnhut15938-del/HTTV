@@ -22,6 +22,15 @@
   document.addEventListener("DOMContentLoaded", () => {
     renderLibrary();
     createMetadataModal();
+
+    // Đăng ký sự kiện sau khi DOM đã sẵn sàng
+    btnUpload.addEventListener("click", () => fileInput.click());
+    fileInput.addEventListener("change", handleFileSelected);
+
+    // Tìm kiếm
+    searchInput.addEventListener("input", () => {
+      renderLibrary(searchInput.value);
+    });
   });
 
   // ===========================
@@ -32,17 +41,16 @@
     if (document.getElementById("metadataModal")) return;
 
     const modal = document.createElement("div");
-
     modal.id = "metadataModal";
 
     modal.style.cssText = `
-      position:fixed;
-      inset:0;
-      background:rgba(0,0,0,.45);
-      display:none;
-      justify-content:center;
-      align-items:center;
-      z-index:9999;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.45);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
     `;
 
     modal.innerHTML = `
@@ -209,7 +217,7 @@
   // ===========================
   // Thêm tài liệu
   // ===========================
-  fileInput.addEventListener("change", async (e) => {
+  async function handleFileSelected(e) {
 
     const file = e.target.files[0];
 
@@ -257,7 +265,7 @@
 
       fileInput.value = "";
     }
-  });
+  }
 
   // ===========================
   // Render danh sách tài liệu
@@ -445,12 +453,5 @@
       });
     }
   }
-
-  // ===========================
-  // Tìm kiếm
-  // ===========================
-  searchInput.addEventListener("input", () => {
-    renderLibrary(searchInput.value);
-  });
 
 })();
