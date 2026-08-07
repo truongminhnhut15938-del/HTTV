@@ -39,7 +39,7 @@
       btnUpload.disabled = true;
       btnUpload.textContent = "Đang phân tích...";
 
-      // Đọc nội dung văn bản bằng parser
+      // Phân tích tài liệu bằng parser
       const doc = await window.parseDocument(file);
 
       // Lưu file PDF gốc để xem lại
@@ -203,7 +203,7 @@
 
   // ===== KHỐI 2/3 NỐI TIẾP TỪ ĐÂY =====
    // ===========================
-  // Hiển thị chi tiết
+  // Hiển thị chi tiết tài liệu
   // ===========================
   function showDetail(doc) {
 
@@ -290,8 +290,9 @@
   });
 
   // ===== KHỐI 3/3 NỐI TIẾP TỪ ĐÂY =====
-  // ===========================
+    // ===========================
   // Kết thúc module
   // ===========================
 
 })();
+ 
