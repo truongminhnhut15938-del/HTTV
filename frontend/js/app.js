@@ -30,36 +30,23 @@
   // ===========================
   // Thêm tài liệu
   // ===========================
-  fileInput.addEventListener("change", async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  // Phân tích tài liệu
+  const doc = await window.parseDocument(file);
 
-    try {
-      btnUpload.disabled = true;
-      btnUpload.textContent = "Đang phân tích...";
+  // Lưu file PDF gốc để có thể xem lại
+      if (file.type === "application/pdf") {
+        const base64 = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
 
-      // Gọi trực tiếp parser
-      const doc = await window.parseDocument(file);
+        doc.fileData = base64;
+      }
 
-      // Lưu tài liệu
+      // Lưu
       addDocument(doc);
-
-      // Cập nhật giao diện
-      renderLibrary();
-      showDetail(doc);
-
-      alert("Đã thêm tài liệu: " + file.name);
-
-    } catch (err) {
-      console.error(err);
-      alert(err.message);
-
-    } finally {
-      btnUpload.disabled = false;
-      btnUpload.textContent = "➕ Thêm tài liệu";
-      fileInput.value = "";
-    }
-  });
 
   // ===========================
   // Render danh sách tài liệu
