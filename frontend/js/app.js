@@ -152,8 +152,8 @@
   // Hiển thị chi tiết
   // ===========================
   function showDetail(doc) {
-    detailView.innerHTML = `
-      <div class="detail-card">
+  detailView.innerHTML = `
+    <div class=
 
         <h2>${doc.name}</h2>
 
