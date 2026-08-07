@@ -153,60 +153,29 @@
   // ===========================
   function showDetail(doc) {
   detailView.innerHTML = `
-    <div class=
+    <div class="detail-card">
 
-        <h2>${doc.name}</h2>
+      <h2>${doc.name}</h2>
 
-        <div class="meta-grid">
+      <p><b>Loại:</b> ${doc.metadata.documentType || "Chưa xác định"}</p>
+      <p><b>Số:</b> ${doc.metadata.documentNumber || "Chưa xác định"}</p>
 
-          <div class="meta-item">
-            <div class="label">Loại văn bản</div>
-            <div class="value">${doc.metadata.documentType || "Chưa xác định"}</div>
-          </div>
+      <h3 style="margin-top:20px">Toàn văn tài liệu</h3>
 
-          <div class="meta-item">
-            <div class="label">Số hiệu</div>
-            <div class="value">${doc.metadata.documentNumber || "Chưa xác định"}</div>
-          </div>
+      <pre style="
+        white-space: pre-wrap;
+        max-height: 70vh;
+        overflow: auto;
+        border: 1px solid #ddd;
+        padding: 16px;
+        border-radius: 12px;
+        background: #fff;
+        line-height: 1.6;
+      ">${doc.rawText || "RAWTEXT RỖNG"}</pre>
 
-          <div class="meta-item">
-            <div class="label">Cơ quan ban hành</div>
-            <div class="value">${doc.metadata.issuingAgency || "Chưa xác định"}</div>
-          </div>
-
-          <div class="meta-item">
-            <div class="label">Ngày ban hành</div>
-            <div class="value">${doc.metadata.issuedDate || "Chưa xác định"}</div>
-          </div>
-
-          <div class="meta-item">
-            <div class="label">Ngày hiệu lực</div>
-            <div class="value">${doc.metadata.effectiveDate || "Chưa xác định"}</div>
-          </div>
-
-          <div class="meta-item">
-            <div class="label">Số điều khoản</div>
-            <div class="value">${doc.clauses.length}</div>
-          </div>
-
-        </div>
-
-        <h3 style="margin-top:18px">Điều khoản</h3>
-
-        <div class="clause-list">
-          ${doc.clauses.length
-            ? doc.clauses.map(c => `
-              <div class="clause">
-                <h4>${c.title}</h4>
-                <p>${c.content || ""}</p>
-              </div>
-            `).join("")
-            : '<p class="empty">Không tìm thấy điều khoản.</p>'}
-        </div>
-
-      </div>
-    `;
-  }
+    </div>
+  `;
+}
 
   // ===========================
   // Tìm kiếm
