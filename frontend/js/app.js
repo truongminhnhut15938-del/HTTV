@@ -13,7 +13,8 @@
   const libraryList = document.getElementById("libraryList");
   const detailView = document.getElementById("detailView");
   const searchInput = document.getElementById("searchInput");
-
+  const btnSearch = document.getElementById("btnSearch");
+  
   let pendingDoc = null;
 
   // ===========================
