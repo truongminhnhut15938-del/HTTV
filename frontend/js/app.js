@@ -1,6 +1,5 @@
 // frontend/js/app.js
-// HTTV v2 - Form metadata dạng bảng (Modal)
-// Giữ nguyên giao diện hiện tại
+// HTTV v3 - Metadata do người dùng nhập + xem PDF + tra cứu
 
 (function () {
   "use strict";
@@ -14,37 +13,58 @@
   const detailView = document.getElementById("detailView");
   const searchInput = document.getElementById("searchInput");
   const btnSearch = document.getElementById("btnSearch");
-  
+
   let pendingDoc = null;
+
+  // ===========================
+  // Local Storage
+  // ===========================
+  const STORAGE_KEY = "httv_documents_v3";
+
+  function loadDocuments() {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+    } catch {
+      return [];
+    }
+  }
+
+  function saveDocuments(docs) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(docs));
+  }
+
+  function addDocument(doc) {
+    const docs = loadDocuments();
+    docs.unshift(doc);
+    saveDocuments(docs);
+  }
 
   // ===========================
   // Khởi động
   // ===========================
-  document.addEventListener("DOMContentLoaded", () => {
-    renderLibrary();
-    createMetadataModal();
+  createMetadataModal();
+  renderLibrary();
 
-    // Đăng ký sự kiện sau khi DOM đã sẵn sàng
-    btnUpload.addEventListener("click", () => fileInput.click());
-    fileInput.addEventListener("change", handleFileSelected);
+  btnUpload.addEventListener("click", () => {
+    fileInput.click();
+  });
 
-    // Nút Tra cứu
-btnSearch.addEventListener("click", () => {
-  renderLibrary(searchInput.value);
-});
+  fileInput.addEventListener("change", handleFileSelected);
 
-// Nhấn Enter cũng tra cứu
-searchInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") {
+  btnSearch.addEventListener("click", () => {
     renderLibrary(searchInput.value);
-  }
-});
-});
+  });
+
+  searchInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      renderLibrary(searchInput.value);
+    }
+  });
+
   // ===========================
-  // Tạo modal nhập metadata
+  // Modal metadata
   // ===========================
   function createMetadataModal() {
-
     if (document.getElementById("metadataModal")) return;
 
     const modal = document.createElement("div");
@@ -170,7 +190,6 @@ searchInput.addEventListener("keydown", (e) => {
   }
 
   function openMetadataModal(doc) {
-
     pendingDoc = doc;
 
     document.getElementById("metaType").value =
@@ -187,18 +206,15 @@ searchInput.addEventListener("keydown", (e) => {
   }
 
   function closeMetadataModal() {
-
     pendingDoc = null;
-
     document.getElementById("metadataModal").style.display = "none";
   }
 
-  // ===== KHỐI 2/3 NỐI TIẾP TỪ ĐÂY =====
+  // ===== KHỐI 2/3 NỐI TIẾP =====
    // ===========================
   // Lưu metadata và tài liệu
   // ===========================
   function saveMetadataAndDocument() {
-
     if (!pendingDoc) return;
 
     pendingDoc.metadata = {
@@ -211,9 +227,7 @@ searchInput.addEventListener("keydown", (e) => {
     };
 
     addDocument(pendingDoc);
-
     renderLibrary();
-
     showDetail(pendingDoc);
 
     alert("Đã thêm tài liệu: " + pendingDoc.name);
@@ -225,30 +239,21 @@ searchInput.addEventListener("keydown", (e) => {
   // Thêm tài liệu
   // ===========================
   async function handleFileSelected(e) {
-
     const file = e.target.files[0];
-
     if (!file) return;
 
     try {
-
       btnUpload.disabled = true;
-
       btnUpload.textContent = "Đang phân tích...";
 
       const doc = await window.parseDocument(file);
 
       // Lưu file PDF gốc
       if (file.type === "application/pdf") {
-
         const base64 = await new Promise((resolve, reject) => {
-
           const reader = new FileReader();
-
           reader.onload = () => resolve(reader.result);
-
           reader.onerror = reject;
-
           reader.readAsDataURL(file);
         });
 
@@ -259,17 +264,12 @@ searchInput.addEventListener("keydown", (e) => {
       openMetadataModal(doc);
 
     } catch (err) {
-
       console.error(err);
-
       alert(err.message);
 
     } finally {
-
       btnUpload.disabled = false;
-
       btnUpload.textContent = "➕ Thêm tài liệu";
-
       fileInput.value = "";
     }
   }
@@ -278,17 +278,14 @@ searchInput.addEventListener("keydown", (e) => {
   // Render danh sách tài liệu
   // ===========================
   function renderLibrary(keyword = "") {
-
     const docs = loadDocuments();
 
     let filtered = docs;
 
     if (keyword) {
-
       const q = keyword.toLowerCase();
 
       filtered = docs.filter(doc => {
-
         return (
           doc.name.toLowerCase().includes(q) ||
           (doc.metadata.documentType || "").toLowerCase().includes(q) ||
@@ -299,10 +296,8 @@ searchInput.addEventListener("keydown", (e) => {
     }
 
     if (!filtered.length) {
-
       libraryList.innerHTML =
         '<p class="empty">Chưa có tài liệu nào.</p>';
-
       return;
     }
 
@@ -348,24 +343,17 @@ searchInput.addEventListener("keydown", (e) => {
 
     // Mở chi tiết
     document.querySelectorAll(".doc-item").forEach(item => {
-
       item.addEventListener("click", () => {
-
         const id = item.dataset.id;
-
         const docs = loadDocuments();
-
         const doc = docs.find(d => d.id === id);
-
         if (doc) showDetail(doc);
       });
     });
 
     // Xóa từng tài liệu
     document.querySelectorAll(".btn-delete").forEach(btn => {
-
       btn.addEventListener("click", (e) => {
-
         e.stopPropagation();
 
         const id = btn.dataset.delete;
@@ -373,7 +361,6 @@ searchInput.addEventListener("keydown", (e) => {
         if (!confirm("Xóa tài liệu này khỏi HTTV?")) return;
 
         let docs = loadDocuments();
-
         docs = docs.filter(d => d.id !== id);
 
         saveDocuments(docs);
@@ -386,11 +373,29 @@ searchInput.addEventListener("keydown", (e) => {
     });
   }
 
-  // ===== KHỐI 3/3 NỐI TIẾP TỪ ĐÂY =====
+  // ===== KHỐI 3/3 NỐI TIẾP =====
    // ===========================
   // Hiển thị chi tiết tài liệu
   // ===========================
   function showDetail(doc) {
+
+    const viewButton = (doc.type === "PDF" && doc.fileData)
+      ? `
+        <button id="btnViewPdf"
+                style="
+                  margin-top:16px;
+                  padding:10px 18px;
+                  background:#2563eb;
+                  color:#fff;
+                  border:none;
+                  border-radius:10px;
+                  cursor:pointer;
+                  font-weight:600;
+                ">
+          📄 Xem file PDF
+        </button>
+      `
+      : "";
 
     detailView.innerHTML = `
       <div class="detail-card">
@@ -431,33 +436,20 @@ searchInput.addEventListener("keydown", (e) => {
 
         </div>
 
-        <button id="btnViewPdf"
-                style="
-                  margin-top:16px;
-                  padding:10px 18px;
-                  background:#2563eb;
-                  color:#fff;
-                  border:none;
-                  border-radius:10px;
-                  cursor:pointer;
-                  font-weight:600;
-                ">
-          📄 Xem file PDF
-        </button>
+        ${viewButton}
 
       </div>
     `;
 
-    const btn = document.getElementById("btnViewPdf");
+    if (doc.type === "PDF" && doc.fileData) {
 
-    if (btn) {
-      btn.addEventListener("click", () => {
-        if (doc.fileData) {
+      const btn = document.getElementById("btnViewPdf");
+
+      if (btn) {
+        btn.addEventListener("click", () => {
           window.open(doc.fileData, "_blank");
-        } else {
-          alert("Chưa có dữ liệu file PDF để xem.");
-        }
-      });
+        });
+      }
     }
   }
 
