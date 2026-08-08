@@ -1,108 +1,267 @@
-// js/storage.js
-// HTTV - Lưu trữ tài liệu offline bằng localStorage
+// frontend/js/storage.js
+// HTTV Storage v3 - IndexedDB
+// Lưu toàn bộ tài liệu (PDF/DOCX + metadata + nội dung parser)
+// trực tiếp trong bộ nhớ thiết bị người dùng.
 
-const STORAGE_KEY = "httv_documents";
+const HTTV_DB_NAME = "HTTV_DB";
+const HTTV_DB_VERSION = 1;
+const HTTV_STORE = "documents";
+
+let httvDB = null;
 
 // ===========================
-// ĐỌC TOÀN BỘ TÀI LIỆU
+// Khởi tạo database
+// ===========================
+function initDB() {
+  return new Promise((resolve, reject) => {
+
+    if (httvDB) {
+      resolve(httvDB);
+      return;
+    }
+
+    const request = indexedDB.open(HTTV_DB_NAME, HTTV_DB_VERSION);
+
+    request.onerror = () => {
+      reject(request.error);
+    };
+
+    request.onsuccess = () => {
+      httvDB = request.result;
+      resolve(httvDB);
+    };
+
+    request.onupgradeneeded = (event) => {
+
+      const db = event.target.result;
+
+      if (!db.objectStoreNames.contains(HTTV_STORE)) {
+
+        const store = db.createObjectStore(HTTV_STORE, {
+          keyPath: "id"
+        });
+
+        store.createIndex(
+          "documentNumber",
+          "metadata.documentNumber",
+          { unique: false }
+        );
+
+        store.createIndex(
+          "documentType",
+          "metadata.documentType",
+          { unique: false }
+        );
+
+        store.createIndex(
+          "issuedDate",
+          "metadata.issuedDate",
+          { unique: false }
+        );
+      }
+    };
+  });
+}
+
+// ===========================
+// Thêm tài liệu
+// ===========================
+async function addDocument(doc) {
+
+  const db = await initDB();
+
+  return new Promise((resolve, reject) => {
+
+    const tx = db.transaction(HTTV_STORE, "readwrite");
+
+    const store = tx.objectStore(HTTV_STORE);
+
+    const request = store.put(doc);
+
+    request.onsuccess = () => resolve(true);
+
+    request.onerror = () => reject(request.error);
+  });
+}
+
+// ===========================
+// Cập nhật tài liệu
+// ===========================
+async function updateDocument(doc) {
+
+  const db = await initDB();
+
+  return new Promise((resolve, reject) => {
+
+    const tx = db.transaction(HTTV_STORE, "readwrite");
+
+    const store = tx.objectStore(HTTV_STORE);
+
+    const request = store.put(doc);
+
+    request.onsuccess = () => resolve(true);
+
+    request.onerror = () => reject(request.error);
+  });
+}
+
+// ===========================
+// Lấy tất cả tài liệu
+// ===========================
+async function getAllDocuments() {
+
+  const db = await initDB();
+
+  return new Promise((resolve, reject) => {
+
+    const tx = db.transaction(HTTV_STORE, "readonly");
+
+    const store = tx.objectStore(HTTV_STORE);
+
+    const request = store.getAll();
+
+    request.onsuccess = () => {
+
+      const docs = request.result || [];
+
+      docs.sort((a, b) => {
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      });
+
+      resolve(docs);
+    };
+
+    request.onerror = () => reject(request.error);
+  });
+}
+
+// ===========================
+// Lấy một tài liệu theo ID
+// ===========================
+async function getDocument(id) {
+
+  const db = await initDB();
+
+  return new Promise((resolve, reject) => {
+
+    const tx = db.transaction(HTTV_STORE, "readonly");
+
+    const store = tx.objectStore(HTTV_STORE);
+
+    const request = store.get(id);
+
+    request.onsuccess = () => {
+      resolve(request.result || null);
+    };
+
+    request.onerror = () => reject(request.error);
+  });
+}
+
+// ===========================
+// Xóa tài liệu
+// ===========================
+async function deleteDocument(id) {
+
+  const db = await initDB();
+
+  return new Promise((resolve, reject) => {
+
+    const tx = db.transaction(HTTV_STORE, "readwrite");
+
+    const store = tx.objectStore(HTTV_STORE);
+
+    const request = store.delete(id);
+
+    request.onsuccess = () => resolve(true);
+
+    request.onerror = () => reject(request.error);
+  });
+}
+
+// ===========================
+// Xóa toàn bộ dữ liệu
+// ===========================
+async function clearDocuments() {
+
+  const db = await initDB();
+
+  return new Promise((resolve, reject) => {
+
+    const tx = db.transaction(HTTV_STORE, "readwrite");
+
+    const store = tx.objectStore(HTTV_STORE);
+
+    const request = store.clear();
+
+    request.onsuccess = () => resolve(true);
+
+    request.onerror = () => reject(request.error);
+  });
+}
+
+// ===========================
+// Tìm kiếm theo metadata
+// ===========================
+async function searchDocuments(keyword) {
+
+  const docs = await getAllDocuments();
+
+  if (!keyword) return docs;
+
+  const q = keyword.toLowerCase();
+
+  return docs.filter(doc => {
+
+    return (
+      (doc.name || "").toLowerCase().includes(q) ||
+
+      (doc.metadata?.documentType || "")
+        .toLowerCase()
+        .includes(q) ||
+
+      (doc.metadata?.documentNumber || "")
+        .toLowerCase()
+        .includes(q) ||
+
+      (doc.metadata?.summary || "")
+        .toLowerCase()
+        .includes(q)
+    );
+  });
+}
+
+// ===========================
+// Tương thích API cũ
 // ===========================
 
-function loadDocuments() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+async function loadDocuments() {
+  return await getAllDocuments();
+}
 
-    if (!raw) return [];
+async function saveDocuments(docs) {
 
-    const docs = JSON.parse(raw);
+  await clearDocuments();
 
-    return Array.isArray(docs) ? docs : [];
-
-  } catch (e) {
-    console.error("Lỗi loadDocuments:", e);
-    return [];
+  for (const doc of docs) {
+    await addDocument(doc);
   }
 }
 
 // ===========================
-// GHI TOÀN BỘ TÀI LIỆU
+// Export
 // ===========================
 
-function saveDocuments(docs) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(docs));
-    return true;
+window.initDB = initDB;
+window.addDocument = addDocument;
+window.updateDocument = updateDocument;
+window.getDocument = getDocument;
+window.getAllDocuments = getAllDocuments;
+window.deleteDocument = deleteDocument;
+window.clearDocuments = clearDocuments;
+window.searchDocuments = searchDocuments;
 
-  } catch (e) {
-    console.error("Lỗi saveDocuments:", e);
-    alert("Không thể lưu dữ liệu. Bộ nhớ trình duyệt có thể đã đầy.");
-    return false;
-  }
-}
+window.loadDocuments = loadDocuments;
+window.saveDocuments = saveDocuments;
 
-// ===========================
-// THÊM TÀI LIỆU
-// ===========================
-
-function addDocument(doc) {
-
-  const docs = loadDocuments();
-
-  docs.unshift(doc);
-
-  saveDocuments(docs);
-
-  return doc;
-}
-
-// ===========================
-// LẤY TÀI LIỆU THEO ID
-// ===========================
-
-function getDocument(id) {
-
-  return loadDocuments().find(d => d.id === id) || null;
-}
-
-// ===========================
-// XÓA TÀI LIỆU
-// ===========================
-
-function deleteDocument(id) {
-
-  const docs = loadDocuments().filter(d => d.id !== id);
-
-  saveDocuments(docs);
-
-  return docs;
-}
-
-// ===========================
-// CẬP NHẬT TÀI LIỆU
-// ===========================
-
-function updateDocument(id, data) {
-
-  const docs = loadDocuments();
-
-  const index = docs.findIndex(d => d.id === id);
-
-  if (index === -1) return null;
-
-  docs[index] = {
-    ...docs[index],
-    ...data
-  };
-
-  saveDocuments(docs);
-
-  return docs[index];
-}
-
-// ===========================
-// XÓA TOÀN BỘ KHO TÀI LIỆU
-// ===========================
-
-function clearLibrary() {
-
-  localStorage.removeItem(STORAGE_KEY);
-}
+console.log("HTTV Storage v3 (IndexedDB) loaded");
