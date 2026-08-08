@@ -376,3 +376,32 @@ body{
     font-size:15px;
 
 }
+.app-header{
+  background:#ffffff;
+  border-radius:18px;
+  padding:18px;
+  margin-bottom:18px;
+  box-shadow:0 2px 10px rgba(0,0,0,0.08);
+}
+
+.header-left{
+  display:flex;
+  align-items:center;
+  gap:14px;
+}
+
+.header-icon{
+  font-size:42px;
+}
+
+.header-text h1{
+  margin:0;
+  font-size:26px;
+  color:#0f3d91;
+}
+
+.header-text p{
+  margin:4px 0 0 0;
+  color:#666;
+  font-size:15px;
+}
