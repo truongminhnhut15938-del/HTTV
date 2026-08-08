@@ -39,7 +39,7 @@ searchInput.addEventListener("keydown", (e) => {
     renderLibrary(searchInput.value);
   }
 });
-
+})
   // ===========================
   // Tạo modal nhập metadata
   // ===========================
