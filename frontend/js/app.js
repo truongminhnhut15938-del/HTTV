@@ -1,5 +1,5 @@
 // frontend/js/app.js
-// HTTV v3 - Metadata do người dùng nhập + xem PDF + tra cứu
+// HTTV v4 - IndexedDB + Metadata + Outline (Chương/Điều)
 
 (function () {
   "use strict";
@@ -17,52 +17,34 @@
   let pendingDoc = null;
 
   // ===========================
-  // Local Storage
-  // ===========================
-  const STORAGE_KEY = "httv_documents_v3";
-
-  function loadDocuments() {
-    try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-    } catch {
-      return [];
-    }
-  }
-
-  function saveDocuments(docs) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(docs));
-  }
-
-  function addDocument(doc) {
-    const docs = loadDocuments();
-    docs.unshift(doc);
-    saveDocuments(docs);
-  }
-
-  // ===========================
   // Khởi động
   // ===========================
-  createMetadataModal();
-  renderLibrary();
+  init();
 
-  btnUpload.addEventListener("click", () => {
-    fileInput.click();
-  });
+  async function init() {
+    await initDB();
+    createMetadataModal();
+    await renderLibrary();
 
-  fileInput.addEventListener("change", handleFileSelected);
+    btnUpload.addEventListener("click", () => {
+      fileInput.click();
+    });
 
-  btnSearch.addEventListener("click", () => {
-    renderLibrary(searchInput.value);
-  });
+    fileInput.addEventListener("change", handleFileSelected);
 
-  searchInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      renderLibrary(searchInput.value);
-    }
-  });
+    btnSearch.addEventListener("click", async () => {
+      await renderLibrary(searchInput.value);
+    });
+
+    searchInput.addEventListener("keydown", async (e) => {
+      if (e.key === "Enter") {
+        await renderLibrary(searchInput.value);
+      }
+    });
+  }
 
   // ===========================
-  // Modal metadata
+  // Modal nhập metadata
   // ===========================
   function createMetadataModal() {
     if (document.getElementById("metadataModal")) return;
@@ -84,7 +66,7 @@
       <div style="
         background:#fff;
         width:92%;
-        max-width:560px;
+        max-width:600px;
         border-radius:14px;
         padding:20px;
         box-shadow:0 12px 40px rgba(0,0,0,.25);
@@ -95,11 +77,11 @@
         <table style="width:100%;border-collapse:collapse;">
 
           <tr>
-            <td style="padding:10px 0;width:160px;">Loại văn bản</td>
+            <td style="padding:10px 0;width:170px;">Loại văn bản</td>
             <td>
               <input id="metaType"
                      style="width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;"
-                     placeholder="Ví dụ: Thông tư">
+                     placeholder="Ví dụ: Thông tư, Nghị định, Quyết định">
             </td>
           </tr>
 
@@ -214,7 +196,7 @@
    // ===========================
   // Lưu metadata và tài liệu
   // ===========================
-  function saveMetadataAndDocument() {
+  async function saveMetadataAndDocument() {
     if (!pendingDoc) return;
 
     pendingDoc.metadata = {
@@ -226,8 +208,12 @@
       summary: document.getElementById("metaSummary").value.trim()
     };
 
-    addDocument(pendingDoc);
-    renderLibrary();
+    pendingDoc.createdAt = new Date().toISOString();
+
+    await addDocument(pendingDoc);
+
+    await renderLibrary();
+
     showDetail(pendingDoc);
 
     alert("Đã thêm tài liệu: " + pendingDoc.name);
@@ -248,19 +234,15 @@
 
       const doc = await window.parseDocument(file);
 
-      // Lưu file PDF gốc
-      if (file.type === "application/pdf") {
-        const base64 = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
+      // Lưu Blob file gốc để xem lại
+      doc.fileBlob = file;
 
-        doc.fileData = base64;
-      }
+      // Chuẩn hóa dữ liệu
+      doc.id = crypto.randomUUID();
 
-      // Hiện form metadata
+      // Outline (Chương - Điều) chuẩn bị cho điều hướng
+      doc.outline = buildOutline(doc);
+
       openMetadataModal(doc);
 
     } catch (err) {
@@ -275,33 +257,75 @@
   }
 
   // ===========================
-  // Render danh sách tài liệu
+  // Tạo Outline (Chương - Điều)
   // ===========================
-  function renderLibrary(keyword = "") {
-    const docs = loadDocuments();
+  function buildOutline(doc) {
+    const outline = [];
 
-    let filtered = docs;
+    const text = doc.rawText || "";
 
-    if (keyword) {
-      const q = keyword.toLowerCase();
+    const chapterRegex = /(Chương\\s+[IVXLC]+[^\\n]*)/gi;
+    const articleRegex = /(Điều\\s+\\d+[^\\n]*)/gi;
 
-      filtered = docs.filter(doc => {
-        return (
-          doc.name.toLowerCase().includes(q) ||
-          (doc.metadata.documentType || "").toLowerCase().includes(q) ||
-          (doc.metadata.documentNumber || "").toLowerCase().includes(q) ||
-          (doc.metadata.summary || "").toLowerCase().includes(q)
-        );
+    const chapters = [...text.matchAll(chapterRegex)];
+
+    if (!chapters.length) {
+      const items = [...text.matchAll(articleRegex)].map((m, i) => ({
+        id: `dieu_${i + 1}`,
+        title: m[1].trim()
+      }));
+
+      if (items.length) {
+        outline.push({
+          title: "Danh mục điều khoản",
+          items
+        });
+      }
+
+      return outline;
+    }
+
+    for (let i = 0; i < chapters.length; i++) {
+
+      const start = chapters[i].index;
+
+      const end =
+        i + 1 < chapters.length
+          ? chapters[i + 1].index
+          : text.length;
+
+      const chapterText = text.slice(start, end);
+
+      const items = [...chapterText.matchAll(articleRegex)].map((m, j) => ({
+        id: `chuong_${i + 1}_dieu_${j + 1}`,
+        title: m[1].trim()
+      }));
+
+      outline.push({
+        title: chapters[i][1].trim(),
+        items
       });
     }
 
-    if (!filtered.length) {
+    return outline;
+  }
+
+  // ===========================
+  // Render danh sách tài liệu
+  // ===========================
+  async function renderLibrary(keyword = "") {
+
+    const docs = keyword
+      ? await searchDocuments(keyword)
+      : await getAllDocuments();
+
+    if (!docs.length) {
       libraryList.innerHTML =
         '<p class="empty">Chưa có tài liệu nào.</p>';
       return;
     }
 
-    libraryList.innerHTML = filtered.map(doc => `
+    libraryList.innerHTML = docs.map(doc => `
       <div class="doc-item" data-id="${doc.id}">
 
         <div style="
@@ -341,31 +365,31 @@
       </div>
     `).join("");
 
-    // Mở chi tiết
     document.querySelectorAll(".doc-item").forEach(item => {
-      item.addEventListener("click", () => {
+
+      item.addEventListener("click", async () => {
+
         const id = item.dataset.id;
-        const docs = loadDocuments();
-        const doc = docs.find(d => d.id === id);
+
+        const doc = await getDocument(id);
+
         if (doc) showDetail(doc);
       });
     });
 
-    // Xóa từng tài liệu
     document.querySelectorAll(".btn-delete").forEach(btn => {
-      btn.addEventListener("click", (e) => {
+
+      btn.addEventListener("click", async (e) => {
+
         e.stopPropagation();
 
         const id = btn.dataset.delete;
 
         if (!confirm("Xóa tài liệu này khỏi HTTV?")) return;
 
-        let docs = loadDocuments();
-        docs = docs.filter(d => d.id !== id);
+        await deleteDocument(id);
 
-        saveDocuments(docs);
-
-        renderLibrary(searchInput.value);
+        await renderLibrary(searchInput.value);
 
         detailView.innerHTML =
           '<p class="empty">Chưa chọn tài liệu.</p>';
@@ -379,23 +403,7 @@
   // ===========================
   function showDetail(doc) {
 
-    const viewButton = (doc.type === "PDF" && doc.fileData)
-      ? `
-        <button id="btnViewPdf"
-                style="
-                  margin-top:16px;
-                  padding:10px 18px;
-                  background:#2563eb;
-                  color:#fff;
-                  border:none;
-                  border-radius:10px;
-                  cursor:pointer;
-                  font-weight:600;
-                ">
-          📄 Xem file PDF
-        </button>
-      `
-      : "";
+    const outlineHtml = renderOutline(doc.outline || []);
 
     detailView.innerHTML = `
       <div class="detail-card">
@@ -436,21 +444,98 @@
 
         </div>
 
-        ${viewButton}
+        <div style="margin-top:18px;">
+          <h3 style="margin:0 0 10px 0;">Nội dung tóm tắt</h3>
+
+          <div style="
+            max-height:260px;
+            overflow:auto;
+            border:1px solid #ddd;
+            border-radius:10px;
+            padding:12px;
+            background:#fafafa;
+          ">
+            ${outlineHtml}
+          </div>
+        </div>
+
+        <button id="btnViewPdf"
+                style="
+                  margin-top:18px;
+                  padding:10px 18px;
+                  background:#2563eb;
+                  color:#fff;
+                  border:none;
+                  border-radius:10px;
+                  cursor:pointer;
+                  font-weight:600;
+                ">
+          📄 Xem file PDF
+        </button>
 
       </div>
     `;
 
-    if (doc.type === "PDF" && doc.fileData) {
+    const btn = document.getElementById("btnViewPdf");
 
-      const btn = document.getElementById("btnViewPdf");
+    if (btn) {
+      btn.addEventListener("click", () => {
 
-      if (btn) {
-        btn.addEventListener("click", () => {
-          window.open(doc.fileData, "_blank");
-        });
-      }
+        if (doc.fileBlob) {
+
+          const url = URL.createObjectURL(doc.fileBlob);
+
+          window.open(url, "_blank");
+
+          setTimeout(() => URL.revokeObjectURL(url), 60000);
+
+        } else {
+
+          alert("Chưa có dữ liệu file để xem.");
+        }
+      });
     }
+  }
+
+  // ===========================
+  // Render Outline (Chương - Điều)
+  // ===========================
+  function renderOutline(outline) {
+
+    if (!outline || !outline.length) {
+      return "<i>Chưa xác định cấu trúc tài liệu.</i>";
+    }
+
+    return outline.map(ch => `
+
+      <div style="margin-bottom:14px;">
+
+        <div style="font-weight:700;color:#1d4ed8;margin-bottom:6px;">
+          ${ch.title}
+        </div>
+
+        <ul style="margin:0;padding-left:18px;">
+
+          ${ch.items.map(it => `
+
+            <li>
+              <a href="#"
+                 class="outline-link"
+                 data-clause="${it.id}"
+                 style="text-decoration:none;color:#111827;">
+
+                ${it.title}
+
+              </a>
+            </li>
+
+          `).join("")}
+
+        </ul>
+
+      </div>
+
+    `).join("");
   }
 
 })();
