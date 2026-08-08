@@ -28,11 +28,17 @@
     btnUpload.addEventListener("click", () => fileInput.click());
     fileInput.addEventListener("change", handleFileSelected);
 
-    // Tìm kiếm
-    searchInput.addEventListener("input", () => {
-      renderLibrary(searchInput.value);
-    });
-  });
+    // Nút Tra cứu
+btnSearch.addEventListener("click", () => {
+  renderLibrary(searchInput.value);
+});
+
+// Nhấn Enter cũng tra cứu
+searchInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    renderLibrary(searchInput.value);
+  }
+});
 
   // ===========================
   // Tạo modal nhập metadata
