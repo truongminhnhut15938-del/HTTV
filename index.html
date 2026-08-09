@@ -13,6 +13,27 @@
 <body>
 
 <div class="app">
+<!-- ===========================
+     HEADER
+============================ -->
+<header class="app-header">
+
+  <div class="header-left">
+
+    <div class="header-icon">
+      <img src="frontend/assets/icon-home.png"
+           alt="Sổ tay"
+           style="width:60px;height:60px;">
+    </div>
+
+    <div class="header-text">
+      <h1>SỔ TAY VĂN BẢN</h1>
+      <p>TMN-KQVIL- Lưu trữ, tra cứu văn bản</p>
+    </div>
+
+  </div>
+
+</header>
   <!-- ===========================
        APP HEADER
   ============================ -->
@@ -86,9 +107,11 @@
     <!-- KHO TÀI LIỆU -->
     <aside class="library-panel">
 
-      <div class="panel-title">
-        📂 Kho tài liệu
-      </div>
+      <div class="panel-title" style="display:flex;align-items:center;gap:10px;">
+  <img src="frontend/assets/icon-library.png"
+       style="width:28px;height:28px;">
+  <span>Kho tài liệu</span>
+</div>
 
       <div id="libraryList" class="library-list">
         <p class="empty">Chưa có tài liệu nào.</p>
@@ -99,9 +122,11 @@
     <!-- CHI TIẾT TÀI LIỆU -->
     <section class="detail-panel">
 
-      <div class="panel-title">
-        📄 Chi tiết tài liệu
-      </div>
+      <div class="panel-title" style="display:flex;align-items:center;gap:10px;">
+  <img src="frontend/assets/icon-search.png"
+       style="width:28px;height:28px;">
+  <span>Chi tiết tài liệu</span>
+</div>
 
       <div id="detailView" class="detail-view">
 
