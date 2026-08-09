@@ -463,3 +463,35 @@ body{
   color:#fff;
   font-weight:600;
 }
+.app-header{
+    background:#ffffff;
+    border-radius:18px;
+    padding:18px;
+    margin:18px;
+    box-shadow:0 2px 10px rgba(0,0,0,0.08);
+}
+
+.header-left{
+    display:flex;
+    align-items:center;
+    gap:14px;
+}
+
+.header-icon img{
+    width:60px;
+    height:60px;
+    object-fit:contain;
+}
+
+.header-text h1{
+    margin:0;
+    font-size:30px;
+    color:#0f3d91;
+    font-weight:800;
+}
+
+.header-text p{
+    margin:6px 0 0 0;
+    color:#666;
+    font-size:16px;
+}
