@@ -180,10 +180,14 @@
     document.getElementById("metaNumber").value =
       doc.metadata.documentNumber || "";
 
-    document.getElementById("metaIssued").value = "";
-    document.getElementById("metaEffective").value = "";
-    document.getElementById("metaSummary").value = "";
+    document.getElementById("metaIssued").value =
+  doc.metadata.issuedDate || "";
 
+document.getElementById("metaEffective").value =
+  doc.metadata.effectiveDate || "";
+
+document.getElementById("metaSummary").value =
+  doc.metadata.summary || "";
     document.getElementById("metadataModal").style.display = "flex";
   }
 
@@ -353,7 +357,7 @@ async function saveMetadataAndDocument() {
       return;
     }
 
-    libraryList.innerHTML = filtered.map(doc => `
+    libraryList.innerHTML = docs.map(doc => `
   <div class="doc-item" data-id="${doc.id}">
 
     <div style="
