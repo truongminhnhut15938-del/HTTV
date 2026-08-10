@@ -195,11 +195,9 @@
   // ===========================
 // Chỉnh sửa metadata tài liệu
 // ===========================
-function editDocumentMetadata(id) {
+async function editDocumentMetadata(id) {
 
-  const docs = loadDocuments();
-
-  const doc = docs.find(d => d.id === id);
+  const doc = await getDocument(id);
 
   if (!doc) return;
 
@@ -224,9 +222,10 @@ function editDocumentMetadata(id) {
 }
   // ===== KHỐI 2/3 NỐI TIẾP =====
    // ===========================
+// // ===========================
 // Lưu metadata (thêm mới hoặc chỉnh sửa)
 // ===========================
-function saveMetadataAndDocument() {
+async function saveMetadataAndDocument() {
 
   if (!pendingDoc) return;
 
@@ -239,26 +238,13 @@ function saveMetadataAndDocument() {
     summary: document.getElementById("metaSummary").value.trim()
   };
 
-  const docs = loadDocuments();
-  const index = docs.findIndex(d => d.id === pendingDoc.id);
+  await saveDocument(pendingDoc);
 
-  if (index >= 0) {
-    // Chỉnh sửa tài liệu đã có
-    docs[index] = pendingDoc;
-    saveDocuments(docs);
-
-    alert("Đã cập nhật thông tin tài liệu: " + pendingDoc.name);
-
-  } else {
-    // Thêm mới
-    addDocument(pendingDoc);
-
-    alert("Đã thêm tài liệu: " + pendingDoc.name);
-  }
-
-  renderLibrary(searchInput.value);
+  await renderLibrary(searchInput.value);
 
   showDetail(pendingDoc);
+
+  alert("Đã lưu thông tin tài liệu: " + pendingDoc.name);
 
   closeMetadataModal();
 }
