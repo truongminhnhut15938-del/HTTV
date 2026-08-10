@@ -201,7 +201,7 @@
     isEditing = false;
     document.getElementById("metadataModal").style.display = "none";
   }
-    // ===========================
+   // ===========================
   // Chỉnh sửa metadata tài liệu
   // ===========================
   async function editDocumentMetadata(id) {
@@ -478,144 +478,121 @@
     });
   }
     // ===========================
-  // Hiển thị chi tiết tài liệu
+  // Render danh sách tài liệu
   // ===========================
-  function showDetail(doc) {
+  async function renderLibrary(keyword = "") {
 
-    const outlineHtml = renderOutline(doc.outline || []);
+    const docs = keyword
+      ? await searchDocuments(keyword)
+      : await getAllDocuments();
 
-    detailView.innerHTML = `
-      <div class="detail-card">
-
-        <h2>${doc.name}</h2>
-
-        <div class="meta-grid">
-
-          <div class="meta-item">
-            <div class="label">Loại văn bản</div>
-            <div class="value">${doc.metadata.documentType || "Chưa xác định"}</div>
-          </div>
-
-          <div class="meta-item">
-            <div class="label">Số văn bản</div>
-            <div class="value">${doc.metadata.documentNumber || "Chưa xác định"}</div>
-          </div>
-
-          <div class="meta-item">
-            <div class="label">Cơ quan ban hành</div>
-            <div class="value">${doc.metadata.issuingAgency || "Chưa xác định"}</div>
-          </div>
-
-          <div class="meta-item">
-            <div class="label">Ngày ban hành</div>
-            <div class="value">${doc.metadata.issuedDate || "Chưa xác định"}</div>
-          </div>
-
-          <div class="meta-item">
-            <div class="label">Ngày hiệu lực</div>
-            <div class="value">${doc.metadata.effectiveDate || "Chưa xác định"}</div>
-          </div>
-
-          <div class="meta-item">
-            <div class="label">Mô tả nội dung</div>
-            <div class="value">${doc.metadata.summary || "Chưa có"}</div>
-          </div>
-
-        </div>
-
-        <div style="margin-top:18px;">
-          <h3 style="margin:0 0 10px 0;">Nội dung tóm tắt</h3>
-
-          <div style="
-            max-height:260px;
-            overflow:auto;
-            border:1px solid #ddd;
-            border-radius:10px;
-            padding:12px;
-            background:#fafafa;
-          ">
-            ${outlineHtml}
-          </div>
-        </div>
-
-        <button id="btnViewPdf"
-                style="
-                  margin-top:18px;
-                  padding:10px 18px;
-                  background:#2563eb;
-                  color:#fff;
-                  border:none;
-                  border-radius:10px;
-                  cursor:pointer;
-                  font-weight:600;
-                ">
-          📄 Xem file PDF
-        </button>
-
-      </div>
-    `;
-
-    const btn = document.getElementById("btnViewPdf");
-
-    if (btn) {
-      btn.addEventListener("click", () => {
-
-        if (doc.fileBlob) {
-
-          const url = URL.createObjectURL(doc.fileBlob);
-
-          window.open(url, "_blank");
-
-          setTimeout(() => URL.revokeObjectURL(url), 60000);
-
-        } else {
-
-          alert("Chưa có dữ liệu file để xem.");
-        }
-      });
-    }
-  }
-
-  // ===========================
-  // Render Outline (Chương - Điều)
-  // ===========================
-  function renderOutline(outline) {
-
-    if (!outline || !outline.length) {
-      return "<i>Chưa xác định cấu trúc tài liệu.</i>";
+    if (!docs.length) {
+      libraryList.innerHTML =
+        '<p class="empty">Chưa có tài liệu nào.</p>';
+      return;
     }
 
-    return outline.map(ch => `
+    libraryList.innerHTML = docs.map(doc => `
+      <div class="doc-item" data-id="${doc.id}">
 
-      <div style="margin-bottom:14px;">
+        <div style="
+          display:flex;
+          justify-content:space-between;
+          align-items:flex-start;
+        ">
 
-        <div style="font-weight:700;color:#1d4ed8;margin-bottom:6px;">
-          ${ch.title}
+          <h3 style="margin:0;">${doc.name}</h3>
+
+          <div style="display:flex; gap:8px;">
+
+            <button class="btn-edit"
+                    data-edit="${doc.id}"
+                    style="
+                      background:none;
+                      border:none;
+                      color:#2563eb;
+                      font-size:18px;
+                      cursor:pointer;
+                    "
+                    title="Chỉnh sửa">
+              ✏️
+            </button>
+
+            <button class="btn-delete"
+                    data-delete="${doc.id}"
+                    style="
+                      background:none;
+                      border:none;
+                      color:#d9534f;
+                      font-size:18px;
+                      cursor:pointer;
+                    "
+                    title="Xóa tài liệu">
+              🗑
+            </button>
+
+          </div>
+
         </div>
 
-        <ul style="margin:0;padding-left:18px;">
+        <p><b>Loại:</b>
+          ${doc.metadata.documentType || "Chưa xác định"}
+        </p>
 
-          ${ch.items.map(it => `
+        <p><b>Số:</b>
+          ${doc.metadata.documentNumber || "Chưa xác định"}
+        </p>
 
-            <li>
-              <a href="#"
-                 class="outline-link"
-                 data-clause="${it.id}"
-                 style="text-decoration:none;color:#111827;">
-
-                ${it.title}
-
-              </a>
-            </li>
-
-          `).join("")}
-
-        </ul>
+        <p><b>Mô tả:</b>
+          ${doc.metadata.summary || "Chưa có"}
+        </p>
 
       </div>
-
     `).join("");
-  }
 
-})();
-  
+    // Mở chi tiết
+    document.querySelectorAll(".doc-item").forEach(item => {
+
+      item.addEventListener("click", async () => {
+
+        const id = item.dataset.id;
+
+        const doc = await getDocument(id);
+
+        if (doc) showDetail(doc);
+      });
+    });
+
+    // Chỉnh sửa metadata
+    document.querySelectorAll(".btn-edit").forEach(btn => {
+
+      btn.addEventListener("click", async (e) => {
+
+        e.stopPropagation();
+
+        const id = btn.dataset.edit;
+
+        await editDocumentMetadata(id);
+      });
+    });
+
+    // Xóa tài liệu
+    document.querySelectorAll(".btn-delete").forEach(btn => {
+
+      btn.addEventListener("click", async (e) => {
+
+        e.stopPropagation();
+
+        const id = btn.dataset.delete;
+
+        if (!confirm("Xóa tài liệu này khỏi HTTV?")) return;
+
+        await deleteDocument(id);
+
+        await renderLibrary(searchInput.value);
+
+        detailView.innerHTML =
+          '<p class="empty">Chưa chọn tài liệu.</p>';
+      });
+    });
+  }
