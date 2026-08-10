@@ -106,6 +106,14 @@ async function updateDocument(doc) {
 }
 
 // ===========================
+// Lưu hoặc cập nhật tài liệu
+// ===========================
+async function saveDocument(doc) {
+  // Dùng put() nên nếu tài liệu đã tồn tại sẽ cập nhật,
+  // chưa tồn tại sẽ thêm mới.
+  return await updateDocument(doc);
+}
+// ===========================
 // Lấy tất cả tài liệu
 // ===========================
 async function getAllDocuments() {
@@ -263,5 +271,6 @@ window.searchDocuments = searchDocuments;
 
 window.loadDocuments = loadDocuments;
 window.saveDocuments = saveDocuments;
+window.saveDocument = saveDocument;
 
 console.log("HTTV Storage v3 (IndexedDB) loaded");
