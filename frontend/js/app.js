@@ -17,8 +17,6 @@
   let pendingDoc = null;
   let isEditing = false;
 
-  // ...
-})();
   // ===========================
   // Chỉnh sửa metadata tài liệu
   // ===========================
