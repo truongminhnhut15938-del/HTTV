@@ -234,35 +234,35 @@
   }
 
   // ===========================
-  // Lưu metadata (thêm mới hoặc chỉnh sửa)
-  // ===========================
-  async function saveMetadataAndDocument() {
+ // ===========================
+// Lưu metadata (thêm mới hoặc chỉnh sửa)
+// ===========================
+async function saveMetadataAndDocument() {
 
-    if (!pendingDoc) return;
+  if (!pendingDoc) return;
 
-    pendingDoc.metadata = {
-      documentType: document.getElementById("metaType").value.trim(),
-      documentNumber: document.getElementById("metaNumber").value.trim(),
-      issuingAgency: pendingDoc.metadata.issuingAgency || "",
-      issuedDate: document.getElementById("metaIssued").value,
-      effectiveDate: document.getElementById("metaEffective").value,
-      summary: document.getElementById("metaSummary").value.trim()
-    };
+  pendingDoc.metadata = {
+    documentType: document.getElementById("metaType").value.trim(),
+    documentNumber: document.getElementById("metaNumber").value.trim(),
+    issuingAgency: pendingDoc.metadata.issuingAgency || "",
+    issuedDate: document.getElementById("metaIssued").value,
+    effectiveDate: document.getElementById("metaEffective").value,
+    summary: document.getElementById("metaSummary").value.trim()
+  };
 
-    await saveDocument(pendingDoc);
+  // Cập nhật lại tài liệu trong IndexedDB
+  await saveDocument(pendingDoc);
 
-    await renderLibrary(searchInput.value);
+  // Cập nhật giao diện
+  await renderLibrary(searchInput.value);
+  showDetail(pendingDoc);
 
-    showDetail(pendingDoc);
+  alert(isEditing
+    ? "Đã cập nhật thông tin tài liệu."
+    : "Đã thêm tài liệu mới.");
 
-    if (isEditing) {
-      alert("Đã cập nhật thông tin tài liệu: " + pendingDoc.name);
-    } else {
-      alert("Đã thêm tài liệu: " + pendingDoc.name);
-    }
-
-    closeMetadataModal();
-  }
+  closeMetadataModal();
+}
 
   // ===========================
   // Thêm tài liệu
