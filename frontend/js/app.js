@@ -1,5 +1,5 @@
 // frontend/js/app.js
-// HTTV v4 - IndexedDB + Metadata + Outline (Chương/Điều)
+// HTTV v4 - Stable + Chỉnh sửa Metadata (1/4)
 
 (function () {
   "use strict";
@@ -15,6 +15,7 @@
   const btnSearch = document.getElementById("btnSearch");
 
   let pendingDoc = null;
+  let isEditing = false;
 
   // ===========================
   // Khởi động
@@ -72,7 +73,7 @@
         box-shadow:0 12px 40px rgba(0,0,0,.25);
       ">
 
-        <h2 style="margin:0 0 16px 0;">Thêm tài liệu</h2>
+        <h2 id="modalTitle" style="margin:0 0 16px 0;">Thêm tài liệu</h2>
 
         <table style="width:100%;border-collapse:collapse;">
 
@@ -173,6 +174,9 @@
 
   function openMetadataModal(doc) {
     pendingDoc = doc;
+    isEditing = false;
+
+    document.getElementById("modalTitle").textContent = "Thêm tài liệu";
 
     document.getElementById("metaType").value =
       doc.metadata.documentType || "";
@@ -181,107 +185,119 @@
       doc.metadata.documentNumber || "";
 
     document.getElementById("metaIssued").value =
-  doc.metadata.issuedDate || "";
+      doc.metadata.issuedDate || "";
 
-document.getElementById("metaEffective").value =
-  doc.metadata.effectiveDate || "";
+    document.getElementById("metaEffective").value =
+      doc.metadata.effectiveDate || "";
 
-document.getElementById("metaSummary").value =
-  doc.metadata.summary || "";
+    document.getElementById("metaSummary").value =
+      doc.metadata.summary || "";
+
     document.getElementById("metadataModal").style.display = "flex";
   }
 
   function closeMetadataModal() {
     pendingDoc = null;
+    isEditing = false;
     document.getElementById("metadataModal").style.display = "none";
+  }
+    // ===========================
+  // Chỉnh sửa metadata tài liệu
+  // ===========================
+  async function editDocumentMetadata(id) {
+
+    const doc = await getDocument(id);
+
+    if (!doc) return;
+
+    pendingDoc = doc;
+    isEditing = true;
+
+    document.getElementById("modalTitle").textContent = "Chỉnh sửa thông tin tài liệu";
+
+    document.getElementById("metaType").value =
+      doc.metadata.documentType || "";
+
+    document.getElementById("metaNumber").value =
+      doc.metadata.documentNumber || "";
+
+    document.getElementById("metaIssued").value =
+      doc.metadata.issuedDate || "";
+
+    document.getElementById("metaEffective").value =
+      doc.metadata.effectiveDate || "";
+
+    document.getElementById("metaSummary").value =
+      doc.metadata.summary || "";
+
+    document.getElementById("metadataModal").style.display = "flex";
   }
 
   // ===========================
-// Chỉnh sửa metadata tài liệu
-// ===========================
-async function editDocumentMetadata(id) {
+  // Lưu metadata (thêm mới hoặc chỉnh sửa)
+  // ===========================
+  async function saveMetadataAndDocument() {
 
-  const doc = await getDocument(id);
+    if (!pendingDoc) return;
 
-  if (!doc) return;
+    pendingDoc.metadata = {
+      documentType: document.getElementById("metaType").value.trim(),
+      documentNumber: document.getElementById("metaNumber").value.trim(),
+      issuingAgency: pendingDoc.metadata.issuingAgency || "",
+      issuedDate: document.getElementById("metaIssued").value,
+      effectiveDate: document.getElementById("metaEffective").value,
+      summary: document.getElementById("metaSummary").value.trim()
+    };
 
-  pendingDoc = doc;
+    await saveDocument(pendingDoc);
 
-  document.getElementById("metaType").value =
-    doc.metadata.documentType || "";
+    await renderLibrary(searchInput.value);
 
-  document.getElementById("metaNumber").value =
-    doc.metadata.documentNumber || "";
+    showDetail(pendingDoc);
 
-  document.getElementById("metaIssued").value =
-    doc.metadata.issuedDate || "";
+    if (isEditing) {
+      alert("Đã cập nhật thông tin tài liệu: " + pendingDoc.name);
+    } else {
+      alert("Đã thêm tài liệu: " + pendingDoc.name);
+    }
 
-  document.getElementById("metaEffective").value =
-    doc.metadata.effectiveDate || "";
-
-  document.getElementById("metaSummary").value =
-    doc.metadata.summary || "";
-
-  document.getElementById("metadataModal").style.display = "flex";
-}
-  // ===== KHỐI 2/3 NỐI TIẾP =====
-   // ===========================
-// // ===========================
-// Lưu metadata (thêm mới hoặc chỉnh sửa)
-// ===========================
-async function saveMetadataAndDocument() {
-
-  if (!pendingDoc) return;
-
-  pendingDoc.metadata = {
-    documentType: document.getElementById("metaType").value.trim(),
-    documentNumber: document.getElementById("metaNumber").value.trim(),
-    issuingAgency: pendingDoc.metadata.issuingAgency || "",
-    issuedDate: document.getElementById("metaIssued").value,
-    effectiveDate: document.getElementById("metaEffective").value,
-    summary: document.getElementById("metaSummary").value.trim()
-  };
-
-  await saveDocument(pendingDoc);
-
-  await renderLibrary(searchInput.value);
-
-  showDetail(pendingDoc);
-
-  alert("Đã lưu thông tin tài liệu: " + pendingDoc.name);
-
-  closeMetadataModal();
-}
+    closeMetadataModal();
+  }
 
   // ===========================
   // Thêm tài liệu
   // ===========================
   async function handleFileSelected(e) {
+
     const file = e.target.files[0];
+
     if (!file) return;
 
     try {
+
       btnUpload.disabled = true;
       btnUpload.textContent = "Đang phân tích...";
 
       const doc = await window.parseDocument(file);
 
-      // Lưu Blob file gốc để xem lại
+      // Lưu file gốc để xem lại
       doc.fileBlob = file;
 
       // Chuẩn hóa dữ liệu
       doc.id = crypto.randomUUID();
 
-      // Outline (Chương - Điều) chuẩn bị cho điều hướng
+      // Outline (Chương - Điều)
       doc.outline = buildOutline(doc);
 
       openMetadataModal(doc);
 
     } catch (err) {
+
       console.error(err);
       alert(err.message);
 
     } finally {
+
       btnUpload.disabled = false;
       btnUpload.textContent = "➕ Thêm tài liệu";
       fileInput.value = "";
@@ -292,8 +308,8 @@ async function saveMetadataAndDocument() {
   // Tạo Outline (Chương - Điều)
   // ===========================
   function buildOutline(doc) {
-    const outline = [];
 
+    const outline = [];
     const text = doc.rawText || "";
 
     const chapterRegex = /(Chương\\s+[IVXLC]+[^\\n]*)/gi;
@@ -302,6 +318,7 @@ async function saveMetadataAndDocument() {
     const chapters = [...text.matchAll(chapterRegex)];
 
     if (!chapters.length) {
+
       const items = [...text.matchAll(articleRegex)].map((m, i) => ({
         id: `dieu_${i + 1}`,
         title: m[1].trim()
@@ -341,8 +358,7 @@ async function saveMetadataAndDocument() {
 
     return outline;
   }
-
-  // ===========================
+    // ===========================
   // Render danh sách tài liệu
   // ===========================
   async function renderLibrary(keyword = "") {
@@ -358,61 +374,64 @@ async function saveMetadataAndDocument() {
     }
 
     libraryList.innerHTML = docs.map(doc => `
-  <div class="doc-item" data-id="${doc.id}">
+      <div class="doc-item" data-id="${doc.id}">
 
-    <div style="
-      display:flex;
-      justify-content:space-between;
-      align-items:flex-start;
-    ">
+        <div style="
+          display:flex;
+          justify-content:space-between;
+          align-items:flex-start;
+        ">
 
-      <h3 style="margin:0;">${doc.name}</h3>
+          <h3 style="margin:0;">${doc.name}</h3>
 
-      <div style="display:flex; gap:8px;">
+          <div style="display:flex; gap:8px;">
 
-        <button class="btn-edit"
-                data-edit="${doc.id}"
-                style="
-                  background:none;
-                  border:none;
-                  color:#2563eb;
-                  font-size:18px;
-                  cursor:pointer;
-                ">
-          ✏️
-        </button>
+            <button class="btn-edit"
+                    data-edit="${doc.id}"
+                    style="
+                      background:none;
+                      border:none;
+                      color:#2563eb;
+                      font-size:18px;
+                      cursor:pointer;
+                    "
+                    title="Chỉnh sửa">
+              ✏️
+            </button>
 
-        <button class="btn-delete"
-                data-delete="${doc.id}"
-                style="
-                  background:none;
-                  border:none;
-                  color:#d9534f;
-                  font-size:18px;
-                  cursor:pointer;
-                ">
-          🗑
-        </button>
+            <button class="btn-delete"
+                    data-delete="${doc.id}"
+                    style="
+                      background:none;
+                      border:none;
+                      color:#d9534f;
+                      font-size:18px;
+                      cursor:pointer;
+                    "
+                    title="Xóa tài liệu">
+              🗑
+            </button>
+
+          </div>
+
+        </div>
+
+        <p><b>Loại:</b>
+          ${doc.metadata.documentType || "Chưa xác định"}
+        </p>
+
+        <p><b>Số:</b>
+          ${doc.metadata.documentNumber || "Chưa xác định"}
+        </p>
+
+        <p><b>Mô tả:</b>
+          ${doc.metadata.summary || "Chưa có"}
+        </p>
 
       </div>
+    `).join("");
 
-    </div>
-
-    <p><b>Loại:</b>
-      ${doc.metadata.documentType || "Chưa xác định"}
-    </p>
-
-    <p><b>Số:</b>
-      ${doc.metadata.documentNumber || "Chưa xác định"}
-    </p>
-
-    <p><b>Mô tả:</b>
-      ${doc.metadata.summary || "Chưa có"}
-    </p>
-
-  </div>
-`).join("");
-
+    // Mở chi tiết
     document.querySelectorAll(".doc-item").forEach(item => {
 
       item.addEventListener("click", async () => {
@@ -426,17 +445,19 @@ async function saveMetadataAndDocument() {
     });
 
     // Chỉnh sửa metadata
-document.querySelectorAll(".btn-edit").forEach(btn => {
+    document.querySelectorAll(".btn-edit").forEach(btn => {
 
-  btn.addEventListener("click", (e) => {
+      btn.addEventListener("click", async (e) => {
 
-    e.stopPropagation();
+        e.stopPropagation();
 
-    const id = btn.dataset.edit;
+        const id = btn.dataset.edit;
 
-    editDocumentMetadata(id);
-  });
-});
+        await editDocumentMetadata(id);
+      });
+    });
+
+    // Xóa tài liệu
     document.querySelectorAll(".btn-delete").forEach(btn => {
 
       btn.addEventListener("click", async (e) => {
@@ -456,9 +477,7 @@ document.querySelectorAll(".btn-edit").forEach(btn => {
       });
     });
   }
-
-  // ===== KHỐI 3/3 NỐI TIẾP =====
-   // ===========================
+    // ===========================
   // Hiển thị chi tiết tài liệu
   // ===========================
   function showDetail(doc) {
@@ -599,3 +618,4 @@ document.querySelectorAll(".btn-edit").forEach(btn => {
   }
 
 })();
+  
