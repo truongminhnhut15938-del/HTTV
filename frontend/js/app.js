@@ -192,34 +192,76 @@
     document.getElementById("metadataModal").style.display = "none";
   }
 
+  // ===========================
+// Chỉnh sửa metadata tài liệu
+// ===========================
+function editDocumentMetadata(id) {
+
+  const docs = loadDocuments();
+
+  const doc = docs.find(d => d.id === id);
+
+  if (!doc) return;
+
+  pendingDoc = doc;
+
+  document.getElementById("metaType").value =
+    doc.metadata.documentType || "";
+
+  document.getElementById("metaNumber").value =
+    doc.metadata.documentNumber || "";
+
+  document.getElementById("metaIssued").value =
+    doc.metadata.issuedDate || "";
+
+  document.getElementById("metaEffective").value =
+    doc.metadata.effectiveDate || "";
+
+  document.getElementById("metaSummary").value =
+    doc.metadata.summary || "";
+
+  document.getElementById("metadataModal").style.display = "flex";
+}
   // ===== KHỐI 2/3 NỐI TIẾP =====
    // ===========================
-  // Lưu metadata và tài liệu
-  // ===========================
-  async function saveMetadataAndDocument() {
-    if (!pendingDoc) return;
+// Lưu metadata (thêm mới hoặc chỉnh sửa)
+// ===========================
+function saveMetadataAndDocument() {
 
-    pendingDoc.metadata = {
-      documentType: document.getElementById("metaType").value.trim(),
-      documentNumber: document.getElementById("metaNumber").value.trim(),
-      issuingAgency: pendingDoc.metadata.issuingAgency || "",
-      issuedDate: document.getElementById("metaIssued").value,
-      effectiveDate: document.getElementById("metaEffective").value,
-      summary: document.getElementById("metaSummary").value.trim()
-    };
+  if (!pendingDoc) return;
 
-    pendingDoc.createdAt = new Date().toISOString();
+  pendingDoc.metadata = {
+    documentType: document.getElementById("metaType").value.trim(),
+    documentNumber: document.getElementById("metaNumber").value.trim(),
+    issuingAgency: pendingDoc.metadata.issuingAgency || "",
+    issuedDate: document.getElementById("metaIssued").value,
+    effectiveDate: document.getElementById("metaEffective").value,
+    summary: document.getElementById("metaSummary").value.trim()
+  };
 
-    await addDocument(pendingDoc);
+  const docs = loadDocuments();
+  const index = docs.findIndex(d => d.id === pendingDoc.id);
 
-    await renderLibrary();
+  if (index >= 0) {
+    // Chỉnh sửa tài liệu đã có
+    docs[index] = pendingDoc;
+    saveDocuments(docs);
 
-    showDetail(pendingDoc);
+    alert("Đã cập nhật thông tin tài liệu: " + pendingDoc.name);
+
+  } else {
+    // Thêm mới
+    addDocument(pendingDoc);
 
     alert("Đã thêm tài liệu: " + pendingDoc.name);
-
-    closeMetadataModal();
   }
+
+  renderLibrary(searchInput.value);
+
+  showDetail(pendingDoc);
+
+  closeMetadataModal();
+}
 
   // ===========================
   // Thêm tài liệu
@@ -325,45 +367,61 @@
       return;
     }
 
-    libraryList.innerHTML = docs.map(doc => `
-      <div class="doc-item" data-id="${doc.id}">
+    libraryList.innerHTML = filtered.map(doc => `
+  <div class="doc-item" data-id="${doc.id}">
 
-        <div style="
-          display:flex;
-          justify-content:space-between;
-          align-items:flex-start;
-        ">
+    <div style="
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+    ">
 
-          <h3 style="margin:0;">${doc.name}</h3>
+      <h3 style="margin:0;">${doc.name}</h3>
 
-          <button class="btn-delete"
-                  data-delete="${doc.id}"
-                  style="
-                    background:none;
-                    border:none;
-                    color:#d9534f;
-                    font-size:18px;
-                    cursor:pointer;
-                  ">
-            🗑
-          </button>
+      <div style="display:flex; gap:8px;">
 
-        </div>
+        <button class="btn-edit"
+                data-edit="${doc.id}"
+                style="
+                  background:none;
+                  border:none;
+                  color:#2563eb;
+                  font-size:18px;
+                  cursor:pointer;
+                ">
+          ✏️
+        </button>
 
-        <p><b>Loại:</b>
-          ${doc.metadata.documentType || "Chưa xác định"}
-        </p>
-
-        <p><b>Số:</b>
-          ${doc.metadata.documentNumber || "Chưa xác định"}
-        </p>
-
-        <p><b>Mô tả:</b>
-          ${doc.metadata.summary || "Chưa có"}
-        </p>
+        <button class="btn-delete"
+                data-delete="${doc.id}"
+                style="
+                  background:none;
+                  border:none;
+                  color:#d9534f;
+                  font-size:18px;
+                  cursor:pointer;
+                ">
+          🗑
+        </button>
 
       </div>
-    `).join("");
+
+    </div>
+
+    <p><b>Loại:</b>
+      ${doc.metadata.documentType || "Chưa xác định"}
+    </p>
+
+    <p><b>Số:</b>
+      ${doc.metadata.documentNumber || "Chưa xác định"}
+    </p>
+
+    <p><b>Mô tả:</b>
+      ${doc.metadata.summary || "Chưa có"}
+    </p>
+
+  </div>
+`).join("");
 
     document.querySelectorAll(".doc-item").forEach(item => {
 
@@ -377,6 +435,18 @@
       });
     });
 
+    // Chỉnh sửa metadata
+document.querySelectorAll(".btn-edit").forEach(btn => {
+
+  btn.addEventListener("click", (e) => {
+
+    e.stopPropagation();
+
+    const id = btn.dataset.edit;
+
+    editDocumentMetadata(id);
+  });
+});
     document.querySelectorAll(".btn-delete").forEach(btn => {
 
       btn.addEventListener("click", async (e) => {
