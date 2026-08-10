@@ -16,6 +16,7 @@
 
   let pendingDoc = null;
   let isEditing = false;
+
   // ===========================
   // Khởi động
   // ===========================
@@ -41,6 +42,148 @@
         await renderLibrary(searchInput.value);
       }
     });
+  }
+
+  // ===========================
+  // Modal nhập metadata
+  // ===========================
+  function createMetadataModal() {
+    if (document.getElementById("metadataModal")) return;
+
+    const modal = document.createElement("div");
+    modal.id = "metadataModal";
+
+    modal.style.cssText = `
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.45);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    `;
+
+    modal.innerHTML = `
+      <div style="
+        background:#fff;
+        width:92%;
+        max-width:600px;
+        border-radius:14px;
+        padding:20px;
+        box-shadow:0 12px 40px rgba(0,0,0,.25);
+      ">
+
+        <h2 id="modalTitle" style="margin:0 0 16px 0;">Thêm tài liệu</h2>
+
+        <table style="width:100%;border-collapse:collapse;">
+
+          <tr>
+            <td style="padding:10px 0;width:170px;">Loại văn bản</td>
+            <td>
+              <input id="metaType"
+                     style="width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;"
+                     placeholder="Ví dụ: Thông tư, Nghị định, Quyết định">
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:10px 0;">Số văn bản</td>
+            <td>
+              <input id="metaNumber"
+                     style="width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;"
+                     placeholder="Ví dụ: 01/2014/TT-NHNN">
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:10px 0;">Ngày ban hành</td>
+            <td>
+              <input id="metaIssued"
+                     type="date"
+                     style="width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;">
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:10px 0;">Ngày hiệu lực</td>
+            <td>
+              <input id="metaEffective"
+                     type="date"
+                     style="width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;">
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:10px 0;vertical-align:top;">Mô tả nội dung ngắn gọn</td>
+            <td>
+              <textarea id="metaSummary"
+                        rows="4"
+                        style="width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;resize:vertical;"
+                        placeholder="Tóm tắt ngắn gọn nội dung văn bản"></textarea>
+            </td>
+          </tr>
+
+        </table>
+
+        <div style="
+          display:flex;
+          justify-content:flex-end;
+          gap:10px;
+          margin-top:18px;
+        ">
+
+          <button id="btnCancelMeta"
+                  style="padding:10px 16px;border:1px solid #ccc;border-radius:8px;background:#fff;cursor:pointer;">
+            Hủy
+          </button>
+
+          <button id="btnSaveMeta"
+                  style="padding:10px 18px;border:none;border-radius:8px;background:#2563eb;color:#fff;cursor:pointer;font-weight:600;">
+            Lưu tài liệu
+          </button>
+
+        </div>
+
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    document.getElementById("btnCancelMeta")
+      .addEventListener("click", closeMetadataModal);
+
+    document.getElementById("btnSaveMeta")
+      .addEventListener("click", saveMetadataAndDocument);
+  }
+
+  function openMetadataModal(doc) {
+    pendingDoc = doc;
+    isEditing = false;
+
+    document.getElementById("modalTitle").textContent = "Thêm tài liệu";
+
+    document.getElementById("metaType").value =
+      doc.metadata.documentType || "";
+
+    document.getElementById("metaNumber").value =
+      doc.metadata.documentNumber || "";
+
+    document.getElementById("metaIssued").value =
+      doc.metadata.issuedDate || "";
+
+    document.getElementById("metaEffective").value =
+      doc.metadata.effectiveDate || "";
+
+    document.getElementById("metaSummary").value =
+      doc.metadata.summary || "";
+
+    document.getElementById("metadataModal").style.display = "flex";
+  }
+
+  function closeMetadataModal() {
+    pendingDoc = null;
+    isEditing = false;
+    document.getElementById("metadataModal").style.display = "none";
   }
   // ===========================
   // Chỉnh sửa metadata tài liệu
@@ -207,7 +350,7 @@
 
     return outline;
   }
-  // ===========================
+    // ===========================
   // Render danh sách tài liệu
   // ===========================
   async function renderLibrary(keyword = "") {
@@ -326,7 +469,7 @@
       });
     });
   }
-  // ===========================
+    // ===========================
   // Hiển thị chi tiết tài liệu
   // ===========================
   function showDetail(doc) {
