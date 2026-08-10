@@ -151,7 +151,7 @@ body{
     box-shadow: var(--shadow);
 
     /* Chiều cao cố định để danh sách cuộn bên trong */
-    height: 420px;
+    height: 220px;
 
     display: flex;
     flex-direction: column;
