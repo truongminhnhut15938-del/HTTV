@@ -233,8 +233,7 @@
     document.getElementById("metadataModal").style.display = "flex";
   }
 
-  // ===========================
- // ===========================
+// ===========================
 // Lưu metadata (thêm mới hoặc chỉnh sửa)
 // ===========================
 async function saveMetadataAndDocument() {
