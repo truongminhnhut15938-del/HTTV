@@ -1,5 +1,5 @@
 // frontend/js/app.js
-// HTTV v4 - Stable + Chỉnh sửa Metadata (1/4)
+// HTTV v4 - Stable + Edit Metadata (1/4)
 
 (function () {
   "use strict";
@@ -45,7 +45,7 @@
   }
 
   // ===========================
-  // Modal nhập metadata
+  // Modal Metadata
   // ===========================
   function createMetadataModal() {
     if (document.getElementById("metadataModal")) return;
@@ -133,26 +133,12 @@
         ">
 
           <button id="btnCancelMeta"
-                  style="
-                    padding:10px 16px;
-                    border:1px solid #ccc;
-                    border-radius:8px;
-                    background:#fff;
-                    cursor:pointer;
-                  ">
+                  style="padding:10px 16px;border:1px solid #ccc;border-radius:8px;background:#fff;cursor:pointer;">
             Hủy
           </button>
 
           <button id="btnSaveMeta"
-                  style="
-                    padding:10px 18px;
-                    border:none;
-                    border-radius:8px;
-                    background:#2563eb;
-                    color:#fff;
-                    cursor:pointer;
-                    font-weight:600;
-                  ">
+                  style="padding:10px 18px;border:none;border-radius:8px;background:#2563eb;color:#fff;cursor:pointer;font-weight:600;">
             Lưu tài liệu
           </button>
 
@@ -163,12 +149,10 @@
 
     document.body.appendChild(modal);
 
-    document
-      .getElementById("btnCancelMeta")
+    document.getElementById("btnCancelMeta")
       .addEventListener("click", closeMetadataModal);
 
-    document
-      .getElementById("btnSaveMeta")
+    document.getElementById("btnSaveMeta")
       .addEventListener("click", saveMetadataAndDocument);
   }
 
@@ -201,7 +185,7 @@
     isEditing = false;
     document.getElementById("metadataModal").style.display = "none";
   }
-   // ===========================
+    // ===========================
   // Chỉnh sửa metadata tài liệu
   // ===========================
   async function editDocumentMetadata(id) {
@@ -233,35 +217,41 @@
     document.getElementById("metadataModal").style.display = "flex";
   }
 
-// ===========================
-// Lưu metadata (thêm mới hoặc chỉnh sửa)
-// ===========================
-async function saveMetadataAndDocument() {
+  // ===========================
+  // Lưu metadata (thêm mới hoặc chỉnh sửa)
+  // ===========================
+  async function saveMetadataAndDocument() {
 
-  if (!pendingDoc) return;
+    if (!pendingDoc) return;
 
-  pendingDoc.metadata = {
-    documentType: document.getElementById("metaType").value.trim(),
-    documentNumber: document.getElementById("metaNumber").value.trim(),
-    issuingAgency: pendingDoc.metadata.issuingAgency || "",
-    issuedDate: document.getElementById("metaIssued").value,
-    effectiveDate: document.getElementById("metaEffective").value,
-    summary: document.getElementById("metaSummary").value.trim()
-  };
+    pendingDoc.metadata = {
+      documentType: document.getElementById("metaType").value.trim(),
+      documentNumber: document.getElementById("metaNumber").value.trim(),
+      issuingAgency: pendingDoc.metadata.issuingAgency || "",
+      issuedDate: document.getElementById("metaIssued").value,
+      effectiveDate: document.getElementById("metaEffective").value,
+      summary: document.getElementById("metaSummary").value.trim()
+    };
 
-  // Cập nhật lại tài liệu trong IndexedDB
-  await saveDocument(pendingDoc);
+    // Nếu đang chỉnh sửa thì cập nhật, nếu không thì thêm mới
+    if (isEditing) {
+      await updateDocument(pendingDoc);
+    } else {
+      await addDocument(pendingDoc);
+    }
 
-  // Cập nhật giao diện
-  await renderLibrary(searchInput.value);
-  showDetail(pendingDoc);
+    await renderLibrary(searchInput.value);
 
-  alert(isEditing
-    ? "Đã cập nhật thông tin tài liệu."
-    : "Đã thêm tài liệu mới.");
+    showDetail(pendingDoc);
 
-  closeMetadataModal();
-}
+    alert(
+      isEditing
+        ? "Đã cập nhật thông tin tài liệu: " + pendingDoc.name
+        : "Đã thêm tài liệu: " + pendingDoc.name
+    );
+
+    closeMetadataModal();
+  }
 
   // ===========================
   // Thêm tài liệu
@@ -284,6 +274,9 @@ async function saveMetadataAndDocument() {
 
       // Chuẩn hóa dữ liệu
       doc.id = crypto.randomUUID();
+
+      // Thời gian tạo
+      doc.createdAt = new Date().toISOString();
 
       // Outline (Chương - Điều)
       doc.outline = buildOutline(doc);
@@ -394,7 +387,7 @@ async function saveMetadataAndDocument() {
                       font-size:18px;
                       cursor:pointer;
                     "
-                    title="Chỉnh sửa">
+                    title="Chỉnh sửa thông tin">
               ✏️
             </button>
 
@@ -430,7 +423,7 @@ async function saveMetadataAndDocument() {
       </div>
     `).join("");
 
-    // Mở chi tiết
+    // Mở chi tiết tài liệu
     document.querySelectorAll(".doc-item").forEach(item => {
 
       item.addEventListener("click", async () => {
@@ -477,121 +470,143 @@ async function saveMetadataAndDocument() {
     });
   }
     // ===========================
-  // Render danh sách tài liệu
+  // Hiển thị chi tiết tài liệu
   // ===========================
-  async function renderLibrary(keyword = "") {
+  function showDetail(doc) {
 
-    const docs = keyword
-      ? await searchDocuments(keyword)
-      : await getAllDocuments();
+    const outlineHtml = renderOutline(doc.outline || []);
 
-    if (!docs.length) {
-      libraryList.innerHTML =
-        '<p class="empty">Chưa có tài liệu nào.</p>';
-      return;
-    }
+    detailView.innerHTML = `
+      <div class="detail-card">
 
-    libraryList.innerHTML = docs.map(doc => `
-      <div class="doc-item" data-id="${doc.id}">
+        <h2>${doc.name}</h2>
 
-        <div style="
-          display:flex;
-          justify-content:space-between;
-          align-items:flex-start;
-        ">
+        <div class="meta-grid">
 
-          <h3 style="margin:0;">${doc.name}</h3>
+          <div class="meta-item">
+            <div class="label">Loại văn bản</div>
+            <div class="value">${doc.metadata.documentType || "Chưa xác định"}</div>
+          </div>
 
-          <div style="display:flex; gap:8px;">
+          <div class="meta-item">
+            <div class="label">Số văn bản</div>
+            <div class="value">${doc.metadata.documentNumber || "Chưa xác định"}</div>
+          </div>
 
-            <button class="btn-edit"
-                    data-edit="${doc.id}"
-                    style="
-                      background:none;
-                      border:none;
-                      color:#2563eb;
-                      font-size:18px;
-                      cursor:pointer;
-                    "
-                    title="Chỉnh sửa">
-              ✏️
-            </button>
+          <div class="meta-item">
+            <div class="label">Cơ quan ban hành</div>
+            <div class="value">${doc.metadata.issuingAgency || "Chưa xác định"}</div>
+          </div>
 
-            <button class="btn-delete"
-                    data-delete="${doc.id}"
-                    style="
-                      background:none;
-                      border:none;
-                      color:#d9534f;
-                      font-size:18px;
-                      cursor:pointer;
-                    "
-                    title="Xóa tài liệu">
-              🗑
-            </button>
+          <div class="meta-item">
+            <div class="label">Ngày ban hành</div>
+            <div class="value">${doc.metadata.issuedDate || "Chưa xác định"}</div>
+          </div>
 
+          <div class="meta-item">
+            <div class="label">Ngày hiệu lực</div>
+            <div class="value">${doc.metadata.effectiveDate || "Chưa xác định"}</div>
+          </div>
+
+          <div class="meta-item">
+            <div class="label">Mô tả nội dung</div>
+            <div class="value">${doc.metadata.summary || "Chưa có"}</div>
           </div>
 
         </div>
 
-        <p><b>Loại:</b>
-          ${doc.metadata.documentType || "Chưa xác định"}
-        </p>
+        <div style="margin-top:18px;">
+          <h3 style="margin:0 0 10px 0;">Nội dung tóm tắt</h3>
 
-        <p><b>Số:</b>
-          ${doc.metadata.documentNumber || "Chưa xác định"}
-        </p>
+          <div style="
+            max-height:260px;
+            overflow:auto;
+            border:1px solid #ddd;
+            border-radius:10px;
+            padding:12px;
+            background:#fafafa;
+          ">
+            ${outlineHtml}
+          </div>
+        </div>
 
-        <p><b>Mô tả:</b>
-          ${doc.metadata.summary || "Chưa có"}
-        </p>
+        <button id="btnViewPdf"
+                style="
+                  margin-top:18px;
+                  padding:10px 18px;
+                  background:#2563eb;
+                  color:#fff;
+                  border:none;
+                  border-radius:10px;
+                  cursor:pointer;
+                  font-weight:600;
+                ">
+          📄 Xem file PDF
+        </button>
 
       </div>
-    `).join("");
+    `;
 
-    // Mở chi tiết
-    document.querySelectorAll(".doc-item").forEach(item => {
+    const btn = document.getElementById("btnViewPdf");
 
-      item.addEventListener("click", async () => {
+    if (btn) {
+      btn.addEventListener("click", () => {
 
-        const id = item.dataset.id;
+        if (doc.fileBlob) {
 
-        const doc = await getDocument(id);
+          const url = URL.createObjectURL(doc.fileBlob);
 
-        if (doc) showDetail(doc);
+          window.open(url, "_blank");
+
+          setTimeout(() => URL.revokeObjectURL(url), 60000);
+
+        } else {
+
+          alert("Chưa có dữ liệu file để xem.");
+        }
       });
-    });
-
-    // Chỉnh sửa metadata
-    document.querySelectorAll(".btn-edit").forEach(btn => {
-
-      btn.addEventListener("click", async (e) => {
-
-        e.stopPropagation();
-
-        const id = btn.dataset.edit;
-
-        await editDocumentMetadata(id);
-      });
-    });
-
-    // Xóa tài liệu
-    document.querySelectorAll(".btn-delete").forEach(btn => {
-
-      btn.addEventListener("click", async (e) => {
-
-        e.stopPropagation();
-
-        const id = btn.dataset.delete;
-
-        if (!confirm("Xóa tài liệu này khỏi HTTV?")) return;
-
-        await deleteDocument(id);
-
-        await renderLibrary(searchInput.value);
-
-        detailView.innerHTML =
-          '<p class="empty">Chưa chọn tài liệu.</p>';
-      });
-    });
+    }
   }
+
+  // ===========================
+  // Render Outline (Chương - Điều)
+  // ===========================
+  function renderOutline(outline) {
+
+    if (!outline || !outline.length) {
+      return "<i>Chưa xác định cấu trúc tài liệu.</i>";
+    }
+
+    return outline.map(ch => `
+
+      <div style="margin-bottom:14px;">
+
+        <div style="font-weight:700;color:#1d4ed8;margin-bottom:6px;">
+          ${ch.title}
+        </div>
+
+        <ul style="margin:0;padding-left:18px;">
+
+          ${ch.items.map(it => `
+
+            <li>
+              <a href="#"
+                 class="outline-link"
+                 data-clause="${it.id}"
+                 style="text-decoration:none;color:#111827;">
+
+                ${it.title}
+
+              </a>
+            </li>
+
+          `).join("")}
+
+        </ul>
+
+      </div>
+
+    `).join("");
+  }
+
+})();
