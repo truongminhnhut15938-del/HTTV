@@ -16,7 +16,32 @@
 
   let pendingDoc = null;
   let isEditing = false;
+  // ===========================
+  // Khởi động
+  // ===========================
+  init();
 
+  async function init() {
+    await initDB();
+    createMetadataModal();
+    await renderLibrary();
+
+    btnUpload.addEventListener("click", () => {
+      fileInput.click();
+    });
+
+    fileInput.addEventListener("change", handleFileSelected);
+
+    btnSearch.addEventListener("click", async () => {
+      await renderLibrary(searchInput.value);
+    });
+
+    searchInput.addEventListener("keydown", async (e) => {
+      if (e.key === "Enter") {
+        await renderLibrary(searchInput.value);
+      }
+    });
+  }
   // ===========================
   // Chỉnh sửa metadata tài liệu
   // ===========================
