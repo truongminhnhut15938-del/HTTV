@@ -149,13 +149,53 @@ body{
     border-radius: var(--radius);
     padding: 18px;
     box-shadow: var(--shadow);
-    height: fit-content;
+
+    /* Chiều cao cố định để danh sách cuộn bên trong */
+    height: 420px;
+
+    display: flex;
+    flex-direction: column;
 }
 
 .library-list{
     display: flex;
     flex-direction: column;
     gap: 12px;
+
+    /* Vùng cuộn */
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    /* Chiếm phần còn lại của panel */
+    flex: 1;
+
+    /* Để thanh cuộn không đè lên nội dung */
+    padding-right: 6px;
+
+    /* Cuộn mượt trên điện thoại */
+    -webkit-overflow-scrolling: touch;
+
+    /* Firefox */
+    scrollbar-width: thin;
+    scrollbar-color: #b0b7c3 transparent;
+}
+
+/* Thanh cuộn cho Chrome / Android */
+.library-list::-webkit-scrollbar{
+    width: 8px;
+}
+
+.library-list::-webkit-scrollbar-track{
+    background: transparent;
+}
+
+.library-list::-webkit-scrollbar-thumb{
+    background: #b0b7c3;
+    border-radius: 8px;
+}
+
+.library-list::-webkit-scrollbar-thumb:hover{
+    background: #8f98a6;
 }
 
 .doc-item{
